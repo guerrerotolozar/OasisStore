@@ -19,7 +19,7 @@
             <span class="oasis-step-num">3</span>
             <div>
                 <p class="font-bold text-xs leading-tight">3. Pago & Entrega Directa</p>
-                <p class="text-[11px] text-muted">SPEI / USDT + Validación inmediata</p>
+                <p class="text-[11px] text-muted">Colombia / SPEI / USDT + Validación inmediata</p>
             </div>
         </div>
     </div>
@@ -150,7 +150,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                     <div class="p-3 rounded-xl bg-background/70 border border-neutral space-y-1">
                         <p class="font-bold text-base">1. Cero Recargos Ocultos</p>
-                        <p class="text-muted leading-relaxed">Pagas exactamente el valor del paquete vía SPEI o USDT sin tarifas fijas de pasarelas externas.</p>
+                        <p class="text-muted leading-relaxed">Pagas exactamente el valor del paquete vía Bancolombia/Nequi, SPEI o USDT sin tarifas fijas de pasarelas externas.</p>
                     </div>
                     <div class="p-3 rounded-xl bg-background/70 border border-neutral space-y-1">
                         <p class="font-bold text-base">2. Alerta Push en Vivo</p>
@@ -227,7 +227,7 @@
             <div class="flex justify-between items-baseline">
                 <div>
                     <span class="text-xs font-bold uppercase tracking-wider text-muted block">Total Exacto a Transferir</span>
-                    <span class="text-[11px] text-muted">Rieles: SPEI 24/7 o USDT</span>
+                    <span class="text-[11px] text-muted">Rieles: Nequi/Bancolombia, SPEI 24/7 o USDT</span>
                 </div>
                 <span class="text-2xl sm:text-3xl font-extrabold text-primary oasis-mono-pill">
                     {{ $total->format($total->total) }}

@@ -44,6 +44,8 @@ services:
     # Enlaza únicamente a la interfaz definida en BIND_IP (127.0.0.1 o IP VPN privada, nunca 0.0.0.0)
     ports:
       - "${BIND_IP:-127.0.0.1}:${APP_PORT:-8085}:80"
+    env_file:
+      - .env
     volumes:
       - "./var:/app/var"
       - "./storage/logs:/app/storage/logs"
@@ -75,6 +77,21 @@ services:
       ARTURO_API_URL: "${ARTURO_API_URL:-}"
       ARTURO_API_KEY: "${ARTURO_API_KEY:-}"
       ARTURO_VAULT_FOLDER: "${ARTURO_VAULT_FOLDER:-OPERACIONES/OasisStore}"
+      # Pasarela OasisP2P (México, Colombia, Cripto protegidos en .env)
+      P2P_SPEI_ENABLED: "${P2P_SPEI_ENABLED:-true}"
+      P2P_SPEI_BANK: "${P2P_SPEI_BANK:-STP / BBVA / Nu México}"
+      P2P_SPEI_CLABE: "${P2P_SPEI_CLABE:-000000000000000000}"
+      P2P_SPEI_HOLDER: "${P2P_SPEI_HOLDER:-OasisStore Digital}"
+      P2P_COP_ENABLED: "${P2P_COP_ENABLED:-true}"
+      P2P_COP_BANK: "${P2P_COP_BANK:-Bancolombia / Nequi}"
+      P2P_COP_ACCOUNT_TYPE: "${P2P_COP_ACCOUNT_TYPE:-Cuenta de Ahorros / Nequi}"
+      P2P_COP_ACCOUNT_NUMBER: "${P2P_COP_ACCOUNT_NUMBER:-0000000000}"
+      P2P_COP_HOLDER: "${P2P_COP_HOLDER:-OasisStore Digital}"
+      P2P_COP_IDENTIFIER_NOTE: "${P2P_COP_IDENTIFIER_NOTE:-}"
+      P2P_CRYPTO_ENABLED: "${P2P_CRYPTO_ENABLED:-true}"
+      P2P_CRYPTO_NETWORK: "${P2P_CRYPTO_NETWORK:-USDT (Red TRC20 / BEP20)}"
+      P2P_CRYPTO_ADDRESS: "${P2P_CRYPTO_ADDRESS:-TXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX}"
+      P2P_CRYPTO_BINANCE_ID: "${P2P_CRYPTO_BINANCE_ID:-}"
     depends_on:
       database:
         condition: service_healthy

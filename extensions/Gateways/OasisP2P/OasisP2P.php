@@ -21,12 +21,37 @@ use Illuminate\Support\Str;
 
 #[ExtensionMeta(
     name: 'OasisP2P',
-    description: 'Pasarela P2P (Transferencia SPEI México y Criptomonedas) con adjuntos privados en Ticket, retención Pending Setup y alertas Webhook.',
-    version: '1.1.0',
+    description: 'Pasarela P2P Multidivisa (Colombia Bancolombia/Nequi, México SPEI, USDT Crypto) con variables de entorno protegidas, adjuntos privados en Ticket, retención Pending Setup y alertas Webhook.',
+    version: '1.2.0',
     author: 'OasisStore'
 )]
 class OasisP2P extends Gateway
 {
+    /**
+     * Resuelve un valor de configuración priorizando variables de entorno (.env)
+     * para blindar cuentas bancarias y wallets fuera de Git y de la base de datos.
+     */
+    protected function getP2PValue(string $envKey, string $configKey, $default = null)
+    {
+        $envVal = env($envKey);
+        if ($envVal !== null && $envVal !== '') {
+            if (is_bool($default)) {
+                return filter_var($envVal, FILTER_VALIDATE_BOOLEAN);
+            }
+            return $envVal;
+        }
+
+        $configVal = $this->config($configKey);
+        if ($configVal !== null && $configVal !== '') {
+            if (is_bool($default)) {
+                return filter_var($configVal, FILTER_VALIDATE_BOOLEAN);
+            }
+            return $configVal;
+        }
+
+        return $default;
+    }
+
     /**
      * Registra rutas, namespace de vistas y escucha del evento oficial Invoice\Paid.
      */
@@ -60,6 +85,7 @@ class OasisP2P extends Gateway
 
     /**
      * Campos configurables desde Admin Dashboard -> Extensions -> Gateways -> OasisP2P.
+     * Si se dejan vacíos en el panel, se leerán automáticamente las variables del .env del servidor.
      */
     public function getConfig($values = []): array
     {
@@ -71,51 +97,102 @@ class OasisP2P extends Gateway
                 'default' => true,
                 'description' => 'Evita que el servicio pase a Active automáticamente al pagar la factura, permitiéndote entregar la microtransacción manualmente y activarlo desde el Dashboard.',
             ],
+            // 1. Colombia (Bancolombia, Nequi, Daviplata, Transfiya)
+            [
+                'name' => 'cop_enabled',
+                'label' => 'Habilitar Transferencia Colombia (Bancolombia / Nequi)',
+                'type' => 'checkbox',
+                'default' => (bool) $this->getP2PValue('P2P_COP_ENABLED', 'cop_enabled', true),
+            ],
+            [
+                'name' => 'cop_bank',
+                'label' => 'Banco / Billetera (Colombia)',
+                'type' => 'text',
+                'default' => (string) $this->getP2PValue('P2P_COP_BANK', 'cop_bank', 'Bancolombia / Nequi'),
+                'required' => false,
+            ],
+            [
+                'name' => 'cop_account_type',
+                'label' => 'Tipo de Cuenta / Modalidad (Colombia)',
+                'type' => 'text',
+                'default' => (string) $this->getP2PValue('P2P_COP_ACCOUNT_TYPE', 'cop_account_type', 'Cuenta de Ahorros / Nequi'),
+                'required' => false,
+            ],
+            [
+                'name' => 'cop_account_number',
+                'label' => 'Número de Cuenta / Billetera / Celular (Colombia)',
+                'type' => 'text',
+                'default' => (string) $this->getP2PValue('P2P_COP_ACCOUNT_NUMBER', 'cop_account_number', '0000000000'),
+                'required' => false,
+            ],
+            [
+                'name' => 'cop_holder',
+                'label' => 'Beneficiario / Titular (Colombia)',
+                'type' => 'text',
+                'default' => (string) $this->getP2PValue('P2P_COP_HOLDER', 'cop_holder', 'OasisStore Digital'),
+                'required' => false,
+            ],
+            [
+                'name' => 'cop_note',
+                'label' => 'Nota / Indicación adicional Colombia (ej. Llave Transfiya)',
+                'type' => 'text',
+                'default' => (string) $this->getP2PValue('P2P_COP_IDENTIFIER_NOTE', 'cop_note', ''),
+                'required' => false,
+            ],
+            // 2. México (SPEI)
             [
                 'name' => 'spei_enabled',
                 'label' => 'Habilitar Transferencia México (SPEI)',
                 'type' => 'checkbox',
-                'default' => true,
+                'default' => (bool) $this->getP2PValue('P2P_SPEI_ENABLED', 'spei_enabled', true),
             ],
             [
                 'name' => 'spei_bank',
                 'label' => 'Banco Receptor (México)',
                 'type' => 'text',
-                'default' => 'STP / BBVA / Nu México',
+                'default' => (string) $this->getP2PValue('P2P_SPEI_BANK', 'spei_bank', 'STP / BBVA / Nu México'),
                 'required' => false,
             ],
             [
                 'name' => 'spei_clabe',
-                'label' => 'CLABE Interbancaria (18 dígitos)',
+                'label' => 'CLABE Interbancaria (18 dígitos México)',
                 'type' => 'text',
-                'default' => '000000000000000000',
+                'default' => (string) $this->getP2PValue('P2P_SPEI_CLABE', 'spei_clabe', '000000000000000000'),
                 'required' => false,
             ],
             [
                 'name' => 'spei_holder',
-                'label' => 'Beneficiario / Titular de la Cuenta',
+                'label' => 'Beneficiario / Titular (México)',
                 'type' => 'text',
-                'default' => 'OasisStore Digital',
+                'default' => (string) $this->getP2PValue('P2P_SPEI_HOLDER', 'spei_holder', 'OasisStore Digital'),
                 'required' => false,
             ],
+            // 3. Criptomonedas (USDT / Binance Pay)
             [
                 'name' => 'crypto_enabled',
                 'label' => 'Habilitar Criptomonedas (USDT / Binance Pay)',
                 'type' => 'checkbox',
-                'default' => true,
+                'default' => (bool) $this->getP2PValue('P2P_CRYPTO_ENABLED', 'crypto_enabled', true),
             ],
             [
                 'name' => 'crypto_network',
                 'label' => 'Red Cripto Aceptada',
                 'type' => 'text',
-                'default' => 'USDT (Red TRC20 / BEP20)',
+                'default' => (string) $this->getP2PValue('P2P_CRYPTO_NETWORK', 'crypto_network', 'USDT (Red TRC20 / BEP20)'),
                 'required' => false,
             ],
             [
                 'name' => 'crypto_address',
-                'label' => 'Dirección de Wallet / Binance Pay ID',
+                'label' => 'Dirección de Wallet USDT',
                 'type' => 'text',
-                'default' => 'TXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+                'default' => (string) $this->getP2PValue('P2P_CRYPTO_ADDRESS', 'crypto_address', 'TXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'),
+                'required' => false,
+            ],
+            [
+                'name' => 'crypto_binance_id',
+                'label' => 'Binance Pay ID (Opcional)',
+                'type' => 'text',
+                'default' => (string) $this->getP2PValue('P2P_CRYPTO_BINANCE_ID', 'crypto_binance_id', ''),
                 'required' => false,
             ],
             [
@@ -138,20 +215,56 @@ class OasisP2P extends Gateway
      */
     public function pay(Invoice $invoice, $total)
     {
+        $cop = [
+            'enabled' => (bool) $this->getP2PValue('P2P_COP_ENABLED', 'cop_enabled', true),
+            'bank' => (string) $this->getP2PValue('P2P_COP_BANK', 'cop_bank', 'Bancolombia / Nequi'),
+            'account_type' => (string) $this->getP2PValue('P2P_COP_ACCOUNT_TYPE', 'cop_account_type', 'Cuenta de Ahorros / Nequi'),
+            'account_number' => (string) $this->getP2PValue('P2P_COP_ACCOUNT_NUMBER', 'cop_account_number', '0000000000'),
+            'holder' => (string) $this->getP2PValue('P2P_COP_HOLDER', 'cop_holder', 'OasisStore Digital'),
+            'note' => (string) $this->getP2PValue('P2P_COP_IDENTIFIER_NOTE', 'cop_note', ''),
+        ];
+
+        $spei = [
+            'enabled' => (bool) $this->getP2PValue('P2P_SPEI_ENABLED', 'spei_enabled', true),
+            'bank' => (string) $this->getP2PValue('P2P_SPEI_BANK', 'spei_bank', 'STP / BBVA / Nu México'),
+            'clabe' => (string) $this->getP2PValue('P2P_SPEI_CLABE', 'spei_clabe', '000000000000000000'),
+            'holder' => (string) $this->getP2PValue('P2P_SPEI_HOLDER', 'spei_holder', 'OasisStore Digital'),
+        ];
+
+        $crypto = [
+            'enabled' => (bool) $this->getP2PValue('P2P_CRYPTO_ENABLED', 'crypto_enabled', true),
+            'network' => (string) $this->getP2PValue('P2P_CRYPTO_NETWORK', 'crypto_network', 'USDT (Red TRC20 / BEP20)'),
+            'address' => (string) $this->getP2PValue('P2P_CRYPTO_ADDRESS', 'crypto_address', 'TXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'),
+            'binance_id' => (string) $this->getP2PValue('P2P_CRYPTO_BINANCE_ID', 'crypto_binance_id', ''),
+        ];
+
+        // Detección automática del método por defecto según moneda de la factura
+        $currencyCode = strtoupper($invoice->currency_code ?? $invoice->currency ?? (str_contains($invoice->formattedRemaining ?? '', 'COP') ? 'COP' : 'MXN'));
+        
+        if (str_contains($currencyCode, 'COP') && $cop['enabled']) {
+            $defaultChannel = 'cop_colombia';
+        } elseif (str_contains($currencyCode, 'MXN') && $spei['enabled']) {
+            $defaultChannel = 'spei_mexico';
+        } elseif ((str_contains($currencyCode, 'USD') || str_contains($currencyCode, 'USDT')) && $crypto['enabled']) {
+            $defaultChannel = 'crypto';
+        } else {
+            // Fallback al primer canal habilitado
+            if ($cop['enabled']) {
+                $defaultChannel = 'cop_colombia';
+            } elseif ($spei['enabled']) {
+                $defaultChannel = 'spei_mexico';
+            } else {
+                $defaultChannel = 'crypto';
+            }
+        }
+
         return view('gateways.oasisp2p::pay', [
             'invoice' => $invoice,
             'total' => $invoice->formattedRemaining,
-            'spei' => [
-                'enabled' => (bool) $this->config('spei_enabled'),
-                'bank' => (string) $this->config('spei_bank'),
-                'clabe' => (string) $this->config('spei_clabe'),
-                'holder' => (string) $this->config('spei_holder'),
-            ],
-            'crypto' => [
-                'enabled' => (bool) $this->config('crypto_enabled'),
-                'network' => (string) $this->config('crypto_network'),
-                'address' => (string) $this->config('crypto_address'),
-            ],
+            'defaultChannel' => $defaultChannel,
+            'cop' => $cop,
+            'spei' => $spei,
+            'crypto' => $crypto,
             'instructions_note' => (string) $this->config('instructions_note'),
         ]);
     }
@@ -175,10 +288,10 @@ class OasisP2P extends Gateway
                 ->route('invoices.show', $invoice)
                 ->with('error', 'Has enviado demasiados comprobantes recientemente. Espera unos minutos.');
         }
-        RateLimiter:: hit($rateKey, 600);
+        RateLimiter::hit($rateKey, 600);
 
         $validated = $request->validate([
-            'payment_channel' => ['required', 'in:spei_mexico,crypto'],
+            'payment_channel' => ['required', 'in:spei_mexico,cop_colombia,crypto'],
             'transaction_ref' => ['nullable', 'string', 'max:120'],
             'player_identifier' => ['nullable', 'string', 'max:120'],
             'receipt_file' => [
@@ -201,9 +314,12 @@ class OasisP2P extends Gateway
         $file->storeAs('tickets/uploads', $newName);
         $fullPath = storage_path('app/' . $relativePath);
 
-        $channelLabel = $validated['payment_channel'] === 'spei_mexico'
-            ? 'Transferencia México (SPEI)'
-            : 'Criptomonedas (USDT / Crypto)';
+        $channelLabel = match ($validated['payment_channel']) {
+            'cop_colombia' => 'Transferencia Colombia (Nequi / Bancolombia)',
+            'spei_mexico' => 'Transferencia México (SPEI)',
+            'crypto' => 'Criptomonedas (USDT / Crypto)',
+            default => 'Transferencia P2P',
+        };
 
         $invoiceLabel = $invoice->number ?: $invoice->id;
         $serviceId = $invoice->items()
@@ -236,9 +352,9 @@ class OasisP2P extends Gateway
                 "- **Factura vinculada:** #{$invoiceLabel} (ID interno: `{$invoice->id}`)",
                 $serviceId ? "- **Servicio vinculado:** #{$serviceId}" : null,
                 "- **Método utilizado:** {$channelLabel}",
-                "- **Referencia / Clave de Rastreo / TxID:** `{$validated['transaction_ref']}`",
+                "- **Referencia / Clave de Rastreo / Nequi / TxID:** `{$validated['transaction_ref']}`",
                 !empty($validated['player_identifier'])
-                    ? "- **ID de Usuario / Destino Microtransacción:** `{$validated['player_identifier']}`"
+                    ? "- **ID de Jugador / Destino Microtransacción:** `{$validated['player_identifier']}`"
                     : null,
                 "- **Estado:** `Pending Setup` (En revisión desde el Admin Dashboard)",
             ]));
