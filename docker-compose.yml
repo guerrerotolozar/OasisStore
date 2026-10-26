@@ -1,0 +1,143 @@
+services:
+  database:
+    image: mariadb:11.4
+    container_name: oasis-db
+    restart: unless-stopped
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - "./data/database:/var/lib/mysql"
+    environment:
+      MYSQL_DATABASE: "${DB_DATABASE:-oasis_paymenter}"
+      MYSQL_USER: "${DB_USERNAME:-oasis_user}"
+      MYSQL_PASSWORD: "${DB_PASSWORD:?Falta definir DB_PASSWORD en el archivo .env}"
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD:?Falta definir DB_ROOT_PASSWORD en el archivo .env}"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - oasis_net
+
+  cache:
+    image: redis:7-alpine
+    container_name: oasis-redis
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - "./data/redis:/data"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - oasis_net
+
+  paymenter:
+    build:
+      context: .
+      dockerfile: docker/paymenter/Dockerfile
+    container_name: oasis-paymenter
+    restart: unless-stopped
+    command: ["/bin/ash", "-c", "chmod -R 777 /app/themes /app/extensions && composer dump-autoload -o && php artisan optimize:clear && exec supervisord -n -c /etc/supervisord.conf"]
+    # Enlaza únicamente a la interfaz definida en BIND_IP (127.0.0.1 o IP VPN privada, nunca 0.0.0.0)
+    ports:
+      - "${BIND_IP:-127.0.0.1}:${APP_PORT:-8085}:80"
+    volumes:
+      - "./var:/app/var"
+      - "./storage/logs:/app/storage/logs"
+      - "./storage/public:/app/storage/app/public"
+      - "./storage/tickets:/app/storage/app/tickets"
+      - "./themes/oasis:/app/themes/oasis"
+      - "./extensions/Gateways/OasisP2P:/app/extensions/Gateways/OasisP2P"
+    environment:
+      APP_NAME: ${APP_NAME:-OasisStore}
+      APP_ENV: ${APP_ENV:-production}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      APP_URL: ${APP_URL:-http://localhost:8085}
+      APP_LOCALE: "${APP_LOCALE:-es}"
+      APP_FALLBACK_LOCALE: "en"
+      TRUSTED_PROXIES: "*"
+      DB_CONNECTION: "mariadb"
+      DB_HOST: "database"
+      DB_PORT: "3306"
+      DB_DATABASE: "${DB_DATABASE:-oasis_paymenter}"
+      DB_USERNAME: "${DB_USERNAME:-oasis_user}"
+      DB_PASSWORD: "${DB_PASSWORD:?Falta definir DB_PASSWORD en el archivo .env}"
+      CACHE_STORE: "redis"
+      SESSION_DRIVER: "redis"
+      QUEUE_CONNECTION: "redis"
+      REDIS_HOST: "cache"
+      PAYMENTER_SKIP_DEFAULT: "true"
+      OASIS_WEBHOOK_URL: "http://oasis-webhook:8000/webhook/paymenter"
+      OASIS_WEBHOOK_SECRET: "${WEBHOOK_SECRET:?Falta definir WEBHOOK_SECRET en el archivo .env}"
+      ARTURO_API_URL: "${ARTURO_API_URL:-}"
+      ARTURO_API_KEY: "${ARTURO_API_KEY:-}"
+      ARTURO_VAULT_FOLDER: "${ARTURO_VAULT_FOLDER:-OPERACIONES/OasisStore}"
+    depends_on:
+      database:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+    networks:
+      - oasis_net
+      - arturo-net
+
+  webhook-notifier:
+    build:
+      context: ./webhook-service
+      dockerfile: Dockerfile
+    container_name: oasis-webhook
+    restart: unless-stopped
+    environment:
+      APP_URL: "${APP_URL:-http://localhost:8085}"
+      WEBHOOK_SECRET: "${WEBHOOK_SECRET:?Falta definir WEBHOOK_SECRET en el archivo .env}"
+      DISCORD_WEBHOOK_URL: "${DISCORD_WEBHOOK_URL:-}"
+      TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN:-}"
+      TELEGRAM_CHAT_ID: "${TELEGRAM_CHAT_ID:-}"
+      ARTURO_API_URL: "${ARTURO_API_URL:-}"
+      ARTURO_API_KEY: "${ARTURO_API_KEY:-}"
+      ARTURO_VAULT_FOLDER: "${ARTURO_VAULT_FOLDER:-OPERACIONES/OasisStore}"
+      ARTURO_LOG_TO_VAULT: "${ARTURO_LOG_TO_VAULT:-true}"
+    networks:
+      - oasis_net
+      - arturo-net
+
+  # Motor de Sincronización de Catálogo (Ejecución bajo demanda: `docker compose --profile scraper run --rm catalog-scraper`)
+  catalog-scraper:
+    build:
+      context: ./catalog-scraper
+      dockerfile: Dockerfile
+    container_name: oasis-catalog-scraper
+    profiles: ["scraper"]
+    restart: "no"
+    volumes:
+      - "./catalog-scraper/data:/app/data:rw"
+      - "./storage/public/catalog-feed:/app/public_export:rw"
+    environment:
+      PYTHONUNBUFFERED: "1"
+      TARGET_STORE_URL: "${TARGET_STORE_URL:-https://example.com/store}"
+      PUBLIC_EXPORT_DIR: "/app/public_export"
+      NOTIFY_URL: "${ARTURO_API_URL:-}/api/notifications"
+      ARTURO_API_KEY: "${ARTURO_API_KEY:-}"
+    networks:
+      - oasis_net
+      - arturo-net
+
+  # Cloudflare Tunnel (opcional: activar con `docker compose --profile tunnel up -d`)
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: oasis-cloudflared
+    profiles: ["tunnel"]
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN:-}
+    networks:
+      - oasis_net
+
+networks:
+  oasis_net:
+    driver: bridge
+  arturo-net:
+    external: true
+    name: arturo-net

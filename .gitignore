@@ -1,0 +1,37 @@
+# ==============================================================================
+# OASIS STORE — GITIGNORE (SEGURIDAD, SECRETOS Y VOLÚMENES DE EJECUCIÓN)
+# ==============================================================================
+
+# 1. Secretos, Variables de Entorno y Sesiones Autenticadas (NUNCA SUBIR A GIT)
+.env
+*.env
+!.env.example
+**/auth.json
+**/sync_error.txt
+**/.last_synced_stamp
+
+# 2. Volúmenes de Persistencia Docker (MariaDB, Redis, Storage y Logs)
+/var/
+/data/
+/storage/
+*.log
+
+# 3. Datos del Scraper (Solo se versiona el esquema de ejemplo genérico)
+catalog-scraper/data/*
+!catalog-scraper/data/catalogo.example.json
+
+# 4. Scrapers Privados y Notas Operativas Internas (Excluidos del Repo Público)
+*-scraper/
+!catalog-scraper/
+CONEXION_ARTURO_API.md
+DOMINIO_CLOUDFLARE_TECH.md
+GAME_SCRAPER_BRIEFING.md
+
+# 5. Entornos Virtuales, Cachés y Archivos del Sistema
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+node_modules/
+.DS_Store
+Thumbs.db
