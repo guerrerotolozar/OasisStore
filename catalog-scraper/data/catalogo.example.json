@@ -1,0 +1,86 @@
+{
+  "ultima_actualizacion": "2026-10-25T18:00:00+00:00",
+  "moneda_base": "COP",
+  "titulo_tienda": "Tienda Digital de Paquetes, Pases & Créditos",
+  "subtitulo_tienda": "Catálogo sincronizado automáticamente. Selecciona cualquier bundle rotativo, pase de temporada o paquete de divisa virtual y liquídalo vía SPEI o USDT con 0% de comisión.",
+  "categories": {
+    "special": {
+      "starter-cyber-pack": {
+        "nombre": "Starter Cyber Bundle",
+        "expira_en": "2026-11-15T00:00:00Z",
+        "unidad": {
+          "clase": "LEGENDARY CLASS",
+          "modelo": "Vanguard MK-II"
+        },
+        "nivel_cuenta": {
+          "nivel": 5,
+          "texto": "Desbloqueo Anticipado de Nivel"
+        },
+        "precio": {
+          "cop": 62500.0,
+          "formateado": "$ 62.500,00 COP"
+        },
+        "imagenes": {
+          "fondo": "images/bundles/demo_bg.webp",
+          "principal": "images/bundles/demo_hero.webp"
+        },
+        "extras": {
+          "descripcion": "Paquete rotativo de ejemplo con unidad desbloqueable y divisa adicional.",
+          "incluye": [
+            "Unidad Vanguard MK-II",
+            "1.500 Créditos Virtuales"
+          ],
+          "items": [
+            {
+              "nombre": "Vanguard MK-II",
+              "imagen": "images/bundles/demo_item_1.webp"
+            },
+            {
+              "nombre": "1.500 Créditos",
+              "imagen": "images/bundles/demo_item_2.webp"
+            }
+          ]
+        }
+      }
+    },
+    "pase_temporada": {
+      "nombre": "Season Pass: Operaciones Nocturnas",
+      "subtitulo": "Desbloquea el circuito premium de recompensas y 15 niveles instantáneos.",
+      "niveles_badge": "+15 NIVELES",
+      "precio": {
+        "cop": 41570.49,
+        "formateado": "$ 41.570,49 COP"
+      },
+      "imagenes": [
+        "images/pass/season_pass_cover.webp"
+      ],
+      "contenido_destacado": [
+        "Aspecto Exclusivo de Temporada",
+        "Multiplicador de XP +25%",
+        "Cofres de Suministros Épicos"
+      ]
+    },
+    "creditos": {
+      "creditos_500": {
+        "nombre": "Bolsa de 500 Créditos",
+        "cantidad": 500,
+        "etiqueta": null,
+        "precio": {
+          "cop": 20760.53,
+          "formateado": "$ 20.760,53 COP"
+        },
+        "imagen": "images/credits/pack_500.webp"
+      },
+      "creditos_1200": {
+        "nombre": "Cofre de 1.200 Créditos",
+        "cantidad": 1200,
+        "etiqueta": "MÁS POPULAR • +20% BONUS",
+        "precio": {
+          "cop": 41570.49,
+          "formateado": "$ 41.570,49 COP"
+        },
+        "imagen": "images/credits/pack_1200.webp"
+      }
+    }
+  }
+}
