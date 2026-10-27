@@ -21,8 +21,8 @@ use Illuminate\Support\Str;
 
 #[ExtensionMeta(
     name: 'OasisP2P',
-    description: 'Pasarela P2P Multidivisa (Colombia Bancolombia/Nequi, México SPEI, USDT Crypto) con variables de entorno protegidas, adjuntos privados en Ticket, retención Pending Setup y alertas Webhook.',
-    version: '1.2.0',
+    description: 'Pasarela P2P Multidivisa (Colombia Bancos/Nequi, México SPEI, USDT Multi-Red & Binance Pay) con variables de entorno blindadas, adjuntos privados en Ticket, retención Pending Setup y alertas Webhook.',
+    version: '1.3.0',
     author: 'OasisStore'
 )]
 class OasisP2P extends Gateway
@@ -100,7 +100,7 @@ class OasisP2P extends Gateway
             // 1. Colombia (Bancolombia, Nequi, Daviplata, Transfiya)
             [
                 'name' => 'cop_enabled',
-                'label' => 'Habilitar Transferencia Colombia (Bancolombia / Nequi)',
+                'label' => 'Habilitar Colombia (Bancos / Billeteras)',
                 'type' => 'checkbox',
                 'default' => (bool) $this->getP2PValue('P2P_COP_ENABLED', 'cop_enabled', true),
             ],
@@ -134,7 +134,7 @@ class OasisP2P extends Gateway
             ],
             [
                 'name' => 'cop_note',
-                'label' => 'Nota / Indicación adicional Colombia (ej. Llave Transfiya)',
+                'label' => 'Nota adicional Colombia (ej. Llave Transfiya / Celular)',
                 'type' => 'text',
                 'default' => (string) $this->getP2PValue('P2P_COP_IDENTIFIER_NOTE', 'cop_note', ''),
                 'required' => false,
@@ -142,7 +142,7 @@ class OasisP2P extends Gateway
             // 2. México (SPEI)
             [
                 'name' => 'spei_enabled',
-                'label' => 'Habilitar Transferencia México (SPEI)',
+                'label' => 'Habilitar México (SPEI)',
                 'type' => 'checkbox',
                 'default' => (bool) $this->getP2PValue('P2P_SPEI_ENABLED', 'spei_enabled', true),
             ],
@@ -167,30 +167,37 @@ class OasisP2P extends Gateway
                 'default' => (string) $this->getP2PValue('P2P_SPEI_HOLDER', 'spei_holder', 'OasisStore Digital'),
                 'required' => false,
             ],
-            // 3. Criptomonedas (USDT / Binance Pay)
+            // 3. Criptomonedas (USDT Multi-Red & Binance Pay)
             [
                 'name' => 'crypto_enabled',
-                'label' => 'Habilitar Criptomonedas (USDT / Binance Pay)',
+                'label' => 'Habilitar Criptomonedas (USDT & Binance Pay)',
                 'type' => 'checkbox',
                 'default' => (bool) $this->getP2PValue('P2P_CRYPTO_ENABLED', 'crypto_enabled', true),
             ],
             [
-                'name' => 'crypto_network',
-                'label' => 'Red Cripto Aceptada',
+                'name' => 'crypto_trc20_address',
+                'label' => 'Dirección USDT - Red Tron (TRC20)',
                 'type' => 'text',
-                'default' => (string) $this->getP2PValue('P2P_CRYPTO_NETWORK', 'crypto_network', 'USDT (Red TRC20 / BEP20)'),
+                'default' => (string) $this->getP2PValue('P2P_CRYPTO_TRC20_ADDRESS', 'crypto_trc20_address', ''),
                 'required' => false,
             ],
             [
-                'name' => 'crypto_address',
-                'label' => 'Dirección de Wallet USDT',
+                'name' => 'crypto_bep20_address',
+                'label' => 'Dirección USDT - Red BNB Smart Chain (BEP20)',
                 'type' => 'text',
-                'default' => (string) $this->getP2PValue('P2P_CRYPTO_ADDRESS', 'crypto_address', 'TXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'),
+                'default' => (string) $this->getP2PValue('P2P_CRYPTO_BEP20_ADDRESS', 'crypto_bep20_address', ''),
+                'required' => false,
+            ],
+            [
+                'name' => 'crypto_polygon_address',
+                'label' => 'Dirección USDT - Red Polygon',
+                'type' => 'text',
+                'default' => (string) $this->getP2PValue('P2P_CRYPTO_POLYGON_ADDRESS', 'crypto_polygon_address', ''),
                 'required' => false,
             ],
             [
                 'name' => 'crypto_binance_id',
-                'label' => 'Binance Pay ID (Opcional)',
+                'label' => 'Binance Pay ID (Fijo y con cero comisiones)',
                 'type' => 'text',
                 'default' => (string) $this->getP2PValue('P2P_CRYPTO_BINANCE_ID', 'crypto_binance_id', ''),
                 'required' => false,
@@ -231,10 +238,66 @@ class OasisP2P extends Gateway
             'holder' => (string) $this->getP2PValue('P2P_SPEI_HOLDER', 'spei_holder', 'OasisStore Digital'),
         ];
 
+        // Construir catálogo de redes USDT dinámicas
+        $trc20 = (string) $this->getP2PValue('P2P_CRYPTO_TRC20_ADDRESS', 'crypto_trc20_address', env('P2P_CRYPTO_ADDRESS', ''));
+        $bep20 = (string) $this->getP2PValue('P2P_CRYPTO_BEP20_ADDRESS', 'crypto_bep20_address', '');
+        $polygon = (string) $this->getP2PValue('P2P_CRYPTO_POLYGON_ADDRESS', 'crypto_polygon_address', '');
+        $sol = (string) $this->getP2PValue('P2P_CRYPTO_SOL_ADDRESS', 'crypto_sol_address', '');
+        $defaultAddr = (string) $this->getP2PValue('P2P_CRYPTO_ADDRESS', 'crypto_address', 'TXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX');
+
+        $cryptoNetworks = [];
+        if (!empty($trc20)) {
+            $cryptoNetworks['TRC20'] = [
+                'key' => 'TRC20',
+                'name' => 'Tron (TRC20)',
+                'badge' => 'TRC20',
+                'address' => $trc20,
+                'note' => 'Red Tron • Comisiones bajas y confirmación veloz',
+            ];
+        }
+        if (!empty($bep20)) {
+            $cryptoNetworks['BEP20'] = [
+                'key' => 'BEP20',
+                'name' => 'BNB Smart Chain (BEP20)',
+                'badge' => 'BEP20',
+                'address' => $bep20,
+                'note' => 'Red BSC • Transferencia rápida',
+            ];
+        }
+        if (!empty($polygon)) {
+            $cryptoNetworks['POLYGON'] = [
+                'key' => 'POLYGON',
+                'name' => 'Polygon (MATIC)',
+                'badge' => 'POLYGON',
+                'address' => $polygon,
+                'note' => 'Red Polygon • Microcomisiones ultra bajas',
+            ];
+        }
+        if (!empty($sol)) {
+            $cryptoNetworks['SOL'] = [
+                'key' => 'SOL',
+                'name' => 'Solana (SOL)',
+                'badge' => 'SOL',
+                'address' => $sol,
+                'note' => 'Red Solana • Ultra rápida',
+            ];
+        }
+
+        // Si no se configuró ninguna red específica, usar fallback TRC20 con la dirección general
+        if (empty($cryptoNetworks)) {
+            $cryptoNetworks['TRC20'] = [
+                'key' => 'TRC20',
+                'name' => 'Tron (TRC20)',
+                'badge' => 'TRC20',
+                'address' => $defaultAddr,
+                'note' => 'Red Tron (USDT TRC20)',
+            ];
+        }
+
         $crypto = [
             'enabled' => (bool) $this->getP2PValue('P2P_CRYPTO_ENABLED', 'crypto_enabled', true),
-            'network' => (string) $this->getP2PValue('P2P_CRYPTO_NETWORK', 'crypto_network', 'USDT (Red TRC20 / BEP20)'),
-            'address' => (string) $this->getP2PValue('P2P_CRYPTO_ADDRESS', 'crypto_address', 'TXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'),
+            'networks' => $cryptoNetworks,
+            'default_network' => array_key_first($cryptoNetworks) ?: 'TRC20',
             'binance_id' => (string) $this->getP2PValue('P2P_CRYPTO_BINANCE_ID', 'crypto_binance_id', ''),
         ];
 
@@ -292,6 +355,7 @@ class OasisP2P extends Gateway
 
         $validated = $request->validate([
             'payment_channel' => ['required', 'in:spei_mexico,cop_colombia,crypto'],
+            'crypto_network' => ['nullable', 'string', 'max:50'],
             'transaction_ref' => ['nullable', 'string', 'max:120'],
             'player_identifier' => ['nullable', 'string', 'max:120'],
             'receipt_file' => [
@@ -315,9 +379,9 @@ class OasisP2P extends Gateway
         $fullPath = storage_path('app/' . $relativePath);
 
         $channelLabel = match ($validated['payment_channel']) {
-            'cop_colombia' => 'Transferencia Colombia (Nequi / Bancolombia)',
+            'cop_colombia' => 'Transferencia Colombia (Nequi / Bancos)',
             'spei_mexico' => 'Transferencia México (SPEI)',
-            'crypto' => 'Criptomonedas (USDT / Crypto)',
+            'crypto' => 'Criptomonedas (USDT' . (!empty($validated['crypto_network']) ? ' - ' . $validated['crypto_network'] : '') . ')',
             default => 'Transferencia P2P',
         };
 
@@ -352,7 +416,7 @@ class OasisP2P extends Gateway
                 "- **Factura vinculada:** #{$invoiceLabel} (ID interno: `{$invoice->id}`)",
                 $serviceId ? "- **Servicio vinculado:** #{$serviceId}" : null,
                 "- **Método utilizado:** {$channelLabel}",
-                "- **Referencia / Clave de Rastreo / Nequi / TxID:** `{$validated['transaction_ref']}`",
+                "- **Referencia / Rastreo / TxID:** `{$validated['transaction_ref']}`",
                 !empty($validated['player_identifier'])
                     ? "- **ID de Jugador / Destino Microtransacción:** `{$validated['player_identifier']}`"
                     : null,
@@ -380,6 +444,7 @@ class OasisP2P extends Gateway
             'service_id' => $serviceId,
             'attachment_uuid' => $attachment->uuid,
             'payment_channel' => $channelLabel,
+            'crypto_network' => $validated['crypto_network'] ?? null,
             'transaction_ref' => $validated['transaction_ref'],
             'player_identifier' => $validated['player_identifier'] ?? null,
             'order_state' => 'Pending Setup',

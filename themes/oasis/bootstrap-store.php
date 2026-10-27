@@ -34,12 +34,20 @@ echo "==================================================================\n";
 Setting::updateOrCreate(['key' => 'theme'], ['value' => 'oasis']);
 Setting::updateOrCreate(['key' => 'theme_oasis_logo_display'], ['value' => 'logo-only']);
 
-// 2. Asegurar moneda USD (y MXN/COP opcional)
-$currency = Currency::firstOrCreate(
-    ['code' => 'USD'],
-    ['prefix' => '$', 'suffix' => ' USD', 'format' => '1,000.00']
+// 2. Asegurar divisas del sistema (COP, USD, MXN)
+$cop = Currency::updateOrCreate(
+    ['code' => 'COP'],
+    ['name' => 'Peso Colombiano', 'prefix' => '$ ', 'suffix' => ' COP', 'format' => '1.000,00']
 );
-echo "✔ Moneda activa verificada: {$currency->code}\n";
+$usd = Currency::updateOrCreate(
+    ['code' => 'USD'],
+    ['name' => 'Dólar (PayPal / Wise / USDT)', 'prefix' => '$', 'suffix' => ' USD', 'format' => '1,000.00']
+);
+$mxn = Currency::updateOrCreate(
+    ['code' => 'MXN'],
+    ['name' => 'Peso Mexicano (SPEI)', 'prefix' => '$', 'suffix' => ' MXN', 'format' => '1,000.00']
+);
+echo "✔ Divisas activas verificadas: COP, USD, MXN\n";
 
 // 3. Crear o actualizar la Pasarela Personalizada OasisP2P
 $gateway = Gateway::updateOrCreate(

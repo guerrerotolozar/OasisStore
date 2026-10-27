@@ -38,33 +38,67 @@ return (function (): ?array {
     $catalog['__asset_prefix'] = '/storage/' . $feedFolder;
     $catalog['__feed_folder'] = $feedFolder;
 
-    // Sincronizar moneda activa en sesión con la moneda base del catálogo
+    // Establecer COP como divisa inicial por defecto únicamente si el usuario no tiene ninguna seleccionada
     try {
-        if (function_exists('session') && session()->isStarted() && session('currency') !== 'COP') {
+        if (function_exists('session') && session()->isStarted() && !session()->has('currency')) {
             session(['currency' => 'COP']);
         }
     } catch (\Throwable $e) {
-        // Ignorar cuando se ejecuta por CLI sin sesión HTTP
+        // Ignorar en CLI
     }
 
     $stampFile = base_path('themes/oasis/.last_synced_stamp');
-    $currentStamp = ($catalog['ultima_actualizacion'] ?? 'unknown') . '|' . $feedFolder . '|v5';
+    $currentStamp = ($catalog['ultima_actualizacion'] ?? 'unknown') . '|' . $feedFolder . '|v7_multicurrency_clean_gamer_desc';
 
     if (is_file($stampFile) && trim((string) @file_get_contents($stampFile)) === $currentStamp) {
         return $catalog;
     }
 
     try {
-        // 1. Asegurar divisa principal (COP) y divisa secundaria (USD)
+        // 1. Registrar Divisas Multimoneda Oficiales (COP, USD y MXN)
         $cop = Currency::updateOrCreate(
             ['code' => 'COP'],
             ['name' => 'Peso Colombiano', 'prefix' => '$ ', 'suffix' => ' COP', 'format' => '1.000,00']
         );
         $usd = Currency::updateOrCreate(
             ['code' => 'USD'],
-            ['name' => 'US Dollar', 'prefix' => '$', 'suffix' => ' USD', 'format' => '1,000.00']
+            ['name' => 'Dólar (PayPal / Wise / USDT)', 'prefix' => '$', 'suffix' => ' USD', 'format' => '1,000.00']
+        );
+        $mxn = Currency::updateOrCreate(
+            ['code' => 'MXN'],
+            ['name' => 'Peso Mexicano (SPEI)', 'prefix' => '$', 'suffix' => ' MXN', 'format' => '1,000.00']
         );
         Setting::updateOrCreate(['key' => 'default_currency'], ['value' => 'COP']);
+
+        // Diccionario de traducción y maquetación amigable para gamers
+        $gamerTranslations = [
+            'HEAVY FIGHTER' => 'Caza Pesado',
+            'MEDIUM FIGHTER' => 'Caza Medio',
+            'LIGHT FIGHTER' => 'Caza Ligero',
+            'INTERCEPTOR' => 'Interceptor',
+            'ATTACK' => 'Ataque Terrestre',
+            'EARLY HANGAR LEVEL UNLOCK!' => 'Desbloqueo Anticipado de Hangar',
+            'EARLY HANGAR LEVEL UNLOCK' => 'Desbloqueo Anticipado de Hangar',
+            'Aircraft Level 8' => 'Aeronave en Nivel 8',
+            'Special Ability Slotted' => 'Ranura de Habilidad Especial Activada',
+            'Legendary F-15 Paint' => 'Pintura / Camuflaje Legendario F-15',
+            'All System Upgrade tracks Level 2' => 'Todas las Rutas de Mejora en Nivel 2',
+            'Mastery Gold Tier Unlocked' => 'Rango de Maestría Oro Desbloqueado',
+            'Pilot Icon, Banner and Aircraft Decal' => 'Insignia de Piloto, Banner y Calcomanía',
+            'Plane Unlock and Legendary Skin' => 'Desbloqueo de Caza + Skin Legendaria',
+            'Pilot Banner' => 'Banner de Piloto Exclusivo',
+            'Pilot Icon' => 'Icono / Avatar de Piloto',
+            'Aircraft Decal' => 'Calcomanía de Aeronave',
+            'Dominate the skies instantly. The Ultimate Bundle is your fast track to elite status with the following:' => 'Domina los cielos al instante con equipamiento de élite y mejoras directas a tu cuenta:',
+            'HUGE CRATE' => 'Caja Enorme de Suministros',
+            '200 GOLD' => '200 Monedas de Oro',
+            '3,600 SILVER' => '3,600 Créditos de Plata',
+            'Go full throttle with this one-time kickstart.' => 'Acelera al máximo tu progreso con este paquete de inicio único.',
+        ];
+
+        $translateText = function (string $text) use ($gamerTranslations): string {
+            return str_ireplace(array_keys($gamerTranslations), array_values($gamerTranslations), $text);
+        };
 
         $upsertProductWithPrice = function (
             Category $category,
@@ -73,7 +107,7 @@ return (function (): ?array {
             string $description,
             float $priceCop,
             ?string $imageRelPath
-        ) use ($cop, $usd): Product {
+        ) use ($cop, $usd, $mxn): Product {
             $product = Product::updateOrCreate(
                 ['slug' => $slug],
                 [
@@ -99,14 +133,24 @@ return (function (): ?array {
                 ]);
             }
 
+            // 1. Precio COP (Base oficial del juego)
             $plan->prices()->updateOrCreate(
                 ['currency_code' => $cop->code],
                 ['price' => round($priceCop, 2), 'setup_fee' => 0.00]
             );
 
+            // 2. Precio USD (Con margen comercial ~6% para cubrir comisiones de pasarelas internacionales PayPal / Wise)
+            $priceUsd = max(1.00, round(($priceCop / 4050) * 1.06, 2));
             $plan->prices()->updateOrCreate(
                 ['currency_code' => $usd->code],
-                ['price' => max(1.00, round($priceCop / 4200, 2)), 'setup_fee' => 0.00]
+                ['price' => $priceUsd, 'setup_fee' => 0.00]
+            );
+
+            // 3. Precio MXN (SPEI México a tasa representativa ~215 COP por 1 MXN)
+            $priceMxn = max(10.00, round($priceCop / 215, 2));
+            $plan->prices()->updateOrCreate(
+                ['currency_code' => $mxn->code],
+                ['price' => $priceMxn, 'setup_fee' => 0.00]
             );
 
             return $product;
@@ -128,33 +172,43 @@ return (function (): ?array {
             $slug = (string) $key;
             $activeSlugs[] = $slug;
 
-            $lines = [];
+            $descLines = [];
             $unitInfo = $item['unidad'] ?? ($item['avion'] ?? null);
-            if (!empty($unitInfo['modelo'])) {
-                $clase = $unitInfo['clase'] ?? 'SPECIAL UNIT';
-                $lines[] = "**Unidad Destacada:** `{$clase} • {$unitInfo['modelo']}`";
-            }
             $tierInfo = $item['nivel_cuenta'] ?? ($item['nivel_hangar'] ?? null);
-            if (!empty($tierInfo['nivel'])) {
-                $unlockTxt = $tierInfo['texto'] ?? 'Desbloqueo de Nivel';
-                $lines[] = "**Nivel {$tierInfo['nivel']}:** *{$unlockTxt}*";
+
+            if (!empty($unitInfo['modelo'])) {
+                $clase = $translateText($unitInfo['clase'] ?? 'Caza');
+                $nivelHangar = !empty($tierInfo['nivel']) ? " • Hangar Nivel {$tierInfo['nivel']}" : '';
+                $descLines[] = "✈️ **{$clase} • {$unitInfo['modelo']}{$nivelHangar}**";
             }
+
             if (!empty($item['extras']['descripcion'])) {
-                $lines[] = "\n" . $item['extras']['descripcion'];
+                $cleanDesc = trim($translateText($item['extras']['descripcion']));
+                if ($cleanDesc) {
+                    $descLines[] = "\n{$cleanDesc}\n";
+                }
             }
+
+            $perks = [];
             if (!empty($item['extras']['incluye'])) {
-                $lines[] = "\n**Incluye en tu cuenta:**";
                 foreach ($item['extras']['incluye'] as $inc) {
-                    $lines[] = "- {$inc}";
+                    $perks[] = "- ⚡ " . $translateText($inc);
                 }
             }
             if (!empty($item['extras']['items'])) {
-                $lines[] = "\n**Contenido del Bundle:**";
                 foreach ($item['extras']['items'] as $sub) {
                     if (!empty($sub['nombre'])) {
-                        $lines[] = "- 🎁 **{$sub['nombre']}**";
+                        $itemName = $translateText($sub['nombre']);
+                        $bullet = "- 🎁 **{$itemName}**";
+                        if (!in_array($bullet, $perks)) {
+                            $perks[] = $bullet;
+                        }
                     }
                 }
+            }
+
+            if (!empty($perks)) {
+                $descLines[] = "**Contenido del Paquete:**\n" . implode("\n", array_slice($perks, 0, 8));
             }
 
             $heroImg = $item['imagenes']['principal']
@@ -166,7 +220,7 @@ return (function (): ?array {
                 $catSpecial,
                 $slug,
                 (string) ($item['nombre'] ?? $slug),
-                implode("\n", $lines),
+                implode("\n", $descLines),
                 $priceCop,
                 $imgRel
             );
@@ -188,15 +242,15 @@ return (function (): ?array {
 
             $fpLines = [];
             if (!empty($passData['niveles_badge'])) {
-                $fpLines[] = "**Bono Web:** `{$passData['niveles_badge']}`";
+                $fpLines[] = "⭐ **Bono de Temporada:** `{$passData['niveles_badge']}`";
             }
             if (!empty($passData['subtitulo'])) {
-                $fpLines[] = $passData['subtitulo'];
+                $fpLines[] = "\n" . $passData['subtitulo'] . "\n";
             }
             if (!empty($passData['contenido_destacado'])) {
-                $fpLines[] = "\n**Recompensas Destacadas del Pase:**";
+                $fpLines[] = "**Recompensas Destacadas:**";
                 foreach ($passData['contenido_destacado'] as $feat) {
-                    $fpLines[] = "- ⚡ {$feat}";
+                    $fpLines[] = "- ⚡ " . $translateText($feat);
                 }
             }
 
@@ -229,9 +283,9 @@ return (function (): ?array {
 
             $badge = !empty($g['etiqueta']) ? " • {$g['etiqueta']}" : '';
             $goldLines = [
-                "**Paquete de Divisa Virtual:** `{$g['cantidad']} Unidades`{$badge}",
-                "- Acreditación directa al ID de jugador indicado",
-                "- Liquidación P2P sin recargo de pasarela",
+                "🪙 **Paquete de Monedas:** `{$g['cantidad']} Unidades`{$badge}",
+                "- ⚡ Acreditación directa al ID de jugador indicado",
+                "- 🛡️ Liquidación P2P directa sin intermediarios",
             ];
 
             $gImg = !empty($g['imagen']) ? $feedFolder . '/' . ltrim($g['imagen'], '/') : null;

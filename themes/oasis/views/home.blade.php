@@ -106,7 +106,7 @@
                     <div>
                         <span class="text-[11px] uppercase text-muted block">Precio Oficial</span>
                         <span class="text-2xl font-extrabold text-primary oasis-mono-pill">
-                            {{ $passMeta['precio']['formateado'] ?? $passProduct->price()->formatted->price }}
+                            {{ $passProduct->price()->formatted->price }}
                         </span>
                     </div>
                     <a href="{{ route('products.checkout', ['category' => $passProduct->category, 'product' => $passProduct->slug]) }}" wire:navigate>
@@ -235,7 +235,7 @@
                             <span class="text-[11px] text-primary font-bold">0% comisión P2P</span>
                         </div>
                         <span class="text-xl sm:text-2xl font-extrabold text-primary oasis-mono-pill">
-                            {{ $meta['precio']['formateado'] ?? $product->price()->formatted->price }}
+                            {{ $product->price()->formatted->price }}
                         </span>
                     </div>
 
@@ -308,7 +308,7 @@
                     <div class="flex items-baseline justify-between">
                         <span class="text-xs text-muted">Importe P2P:</span>
                         <span class="text-xl font-extrabold text-primary oasis-mono-pill">
-                            {{ $gData['precio']['formateado'] ?? $product->price()->formatted->price }}
+                            {{ $product->price()->formatted->price }}
                         </span>
                     </div>
 
