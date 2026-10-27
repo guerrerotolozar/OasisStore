@@ -60,8 +60,8 @@
                     </div>
 
                     @if ($product->description)
-                    <article class="prose dark:prose-invert text-sm text-muted max-w-none">
-                        {!! $product->description !!}
+                    <article class="prose dark:prose-invert text-sm text-muted max-w-none pt-2 [&_ul]:my-2 [&_ul]:space-y-1.5 [&_li]:text-sm [&_strong]:text-base [&_code]:text-primary [&_code]:bg-primary/10 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded">
+                        {!! Str::markdown($product->description) !!}
                     </article>
                     @endif
                 </div>

@@ -76,8 +76,13 @@
                             {{ $item->product->name }}
                         </h2>
                         @if ($item->product->description)
-                        <div class="prose dark:prose-invert prose-sm text-muted max-w-none pt-1">
-                            {!! $item->product->description !!}
+                        <div class="pt-2 text-xs text-muted" x-data="{ expanded: false }">
+                            <div :class="expanded ? '' : 'line-clamp-3 sm:line-clamp-none'" class="prose dark:prose-invert prose-xs text-muted max-w-none [&_ul]:my-1.5 [&_ul]:space-y-1 [&_li]:text-xs [&_strong]:text-base [&_code]:text-primary [&_code]:bg-primary/10 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded">
+                                {!! Str::markdown($item->product->description) !!}
+                            </div>
+                            <button type="button" @click="expanded = !expanded" class="sm:hidden text-[11px] font-bold text-primary hover:underline mt-1.5 inline-flex items-center gap-1">
+                                <span x-text="expanded ? '▲ Ocultar detalles' : '▼ Ver contenido del paquete'"></span>
+                            </button>
                         </div>
                         @endif
 

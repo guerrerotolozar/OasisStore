@@ -60,7 +60,7 @@
                     </div>
                     <h1 class="text-2xl sm:text-3xl font-extrabold text-base">{{ $product->name }}</h1>
                     @if ($product->description)
-                    <article class="prose dark:prose-invert prose-sm text-muted max-w-none pt-1">
+                    <article class="prose dark:prose-invert prose-sm text-muted max-w-none pt-1 [&_ul]:my-2 [&_ul]:space-y-1 [&_li]:text-xs [&_strong]:text-base [&_code]:text-primary [&_code]:bg-primary/10 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded">
                         {!! Str::markdown($product->description) !!}
                     </article>
                     @endif

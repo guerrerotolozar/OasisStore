@@ -64,7 +64,7 @@
             $gMeta = $goldMeta[$gKey] ?? null;
             $bgImg = !empty($sMeta['imagenes']['fondo']) ? $assetPrefix . '/' . ltrim($sMeta['imagenes']['fondo'], '/') : null;
             $glowImg = !empty($sMeta['imagenes']['brillo']) ? $assetPrefix . '/' . ltrim($sMeta['imagenes']['brillo'], '/') : null;
-            $FormattedCop = $sMeta['precio']['formateado'] ?? ($gMeta['precio']['formateado'] ?? $product->price()->formatted->price);
+            $displayPrice = $product->price()->formatted->price;
         @endphp
         <div class="oasis-terminal flex flex-col justify-between overflow-hidden hover:border-primary transition-all duration-200 group">
             <div>
@@ -99,7 +99,7 @@
                     </h2>
 
                     @if ($product->description)
-                    <article class="prose dark:prose-invert prose-xs text-muted line-clamp-4 pt-1 border-t border-neutral/60">
+                    <article class="prose dark:prose-invert prose-xs text-muted line-clamp-4 pt-1 border-t border-neutral/60 [&_ul]:my-1 [&_ul]:space-y-0.5 [&_li]:text-[11px] [&_strong]:text-base [&_code]:text-primary [&_code]:bg-primary/10 [&_code]:px-1 [&_code]:py-0.2 [&_code]:rounded">
                         {!! Str::markdown($product->description) !!}
                     </article>
                     @endif
@@ -113,7 +113,7 @@
                         <span class="text-[11px] text-primary font-semibold">Sin recargo P2P</span>
                     </div>
                     <span class="text-xl font-extrabold text-primary oasis-mono-pill">
-                        {{ $FormattedCop }}
+                        {{ $displayPrice }}
                     </span>
                 </div>
 
