@@ -124,22 +124,23 @@ services:
       - oasis_net
       - arturo-net
 
-  # Motor de Sincronización de Catálogo (Ejecución bajo demanda: `docker compose --profile scraper run --rm catalog-scraper`)
+  # Motor de Sincronización de Catálogo Metalstorm (Ejecución bajo demanda / Cron: `docker compose --profile scraper run --rm catalog-scraper`)
   catalog-scraper:
     build:
-      context: ./catalog-scraper
+      context: ./metalstorm-scraper
       dockerfile: Dockerfile
     container_name: oasis-catalog-scraper
     profiles: ["scraper"]
     restart: "no"
     volumes:
-      - "./catalog-scraper/data:/app/data:rw"
-      - "./storage/public/catalog-feed:/app/public_export:rw"
+      - "./metalstorm-scraper/data:/app/data:rw"
+      - "./metalstorm-scraper/auth.json:/app/auth.json:rw"
+      - "./storage/public/metalstorm:/app/public_export:rw"
+      - "./storage/public/catalog-feed:/app/catalog_feed:rw"
     environment:
       PYTHONUNBUFFERED: "1"
-      TARGET_STORE_URL: "${TARGET_STORE_URL:-https://example.com/store}"
       PUBLIC_EXPORT_DIR: "/app/public_export"
-      NOTIFY_URL: "${ARTURO_API_URL:-}/api/notifications"
+      NOTIFY_URL: "${ARTURO_API_URL:-http://Arturo-Api:3000}/api/notifications"
       ARTURO_API_KEY: "${ARTURO_API_KEY:-}"
     networks:
       - oasis_net

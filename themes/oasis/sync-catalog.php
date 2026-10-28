@@ -12,12 +12,24 @@ use App\Models\Product;
 use App\Models\Setting;
 
 return (function (): ?array {
-    $preferredPath = storage_path('app/public/catalog-feed/catalogo.json');
-    $catalogPath = is_file($preferredPath) ? $preferredPath : null;
+    $candidates = [
+        storage_path('app/public/metalstorm/catalogo.json'),
+        storage_path('app/public/catalog-feed/catalogo.json'),
+    ];
+    foreach (glob(storage_path('app/public/*/catalogo.json')) ?: [] as $cand) {
+        $candidates[] = $cand;
+    }
 
-    if (!$catalogPath) {
-        $matches = glob(storage_path('app/public/*/catalogo.json')) ?: [];
-        $catalogPath = $matches[0] ?? null;
+    $catalogPath = null;
+    $latestMtime = -1;
+    foreach (array_unique($candidates) as $cand) {
+        if (is_file($cand)) {
+            $mtime = (int) @filemtime($cand);
+            if ($mtime > $latestMtime) {
+                $latestMtime = $mtime;
+                $catalogPath = $cand;
+            }
+        }
     }
 
     if (!$catalogPath || !is_file($catalogPath)) {
@@ -54,7 +66,7 @@ return (function (): ?array {
     $stampFile = base_path('themes/oasis/.last_synced_stamp');
     $currentStamp = ($catalog['ultima_actualizacion'] ?? 'unknown') . '|' . $feedFolder . '|v7_multicurrency_clean_gamer_desc';
 
-    if (is_file($stampFile) && trim((string) @file_get_contents($stampFile)) === $currentStamp) {
+    if (is_file($stampFile) && trim((string) @file_get_contents($stampFile)) === $currentStamp && Product::count() > 3) {
         return $catalog;
     }
 
