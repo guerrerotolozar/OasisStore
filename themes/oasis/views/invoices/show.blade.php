@@ -1,4 +1,5 @@
 @php
+    require_once base_path('themes/oasis/helpers.php');
     $oasisGateway = \App\Models\Gateway::where('extension', 'OasisP2P')->where('enabled', true)->first();
     $oasisPayView = ($oasisGateway && $invoice->status === 'pending')
         ? \App\Helpers\ExtensionHelper::pay($oasisGateway, $invoice)
@@ -21,23 +22,23 @@
         <div class="oasis-step oasis-step-done">
             <span class="oasis-step-num">✓</span>
             <div>
-                <p class="font-bold text-xs leading-tight">1. Paquete Reservado</p>
-                <p class="text-[11px] text-muted">Stock bloqueado para tu cuenta</p>
+                <p class="font-bold text-xs leading-tight">{{ oasis_t('1. Paquete Reservado') }}</p>
+                <p class="text-[11px] text-muted">{{ oasis_t('Stock bloqueado para tu cuenta') }}</p>
             </div>
         </div>
         <div class="oasis-step oasis-step-done">
             <span class="oasis-step-num">✓</span>
             <div>
-                <p class="font-bold text-xs leading-tight">2. Orden #{{ $invRef }} Emitida</p>
-                <p class="text-[11px] text-muted">Folio P2P generado sin comisión</p>
+                <p class="font-bold text-xs leading-tight">{{ oasis_t('2. Orden #:ref Emitida', ['ref' => $invRef]) }}</p>
+                <p class="text-[11px] text-muted">{{ oasis_t('Folio P2P generado sin comisión') }}</p>
             </div>
         </div>
         <div class="oasis-step oasis-step-active">
             <span class="oasis-step-num">3</span>
             <div>
-                <p class="font-bold text-xs leading-tight">3. Transferencia & Comprobante</p>
+                <p class="font-bold text-xs leading-tight">{{ oasis_t('3. Transferencia & Comprobante') }}</p>
                 <p class="text-[11px] text-muted">
-                    {{ $existingTicket ? 'Comprobante en revisión activa' : 'Envía tu captura para liberar el paquete' }}
+                    {{ $existingTicket ? oasis_t('Comprobante en revisión activa') : oasis_t('Envía tu captura para liberar el paquete') }}
                 </p>
             </div>
         </div>
@@ -48,21 +49,21 @@
         <div>
             <div class="flex flex-wrap items-center gap-2">
                 <span class="oasis-mono-pill px-2.5 py-0.5 rounded-md bg-primary/15 text-primary border border-primary/30 font-bold">
-                    ORDEN #{{ $invRef }}
+                    {{ oasis_t('ORDEN') }} #{{ $invRef }}
                 </span>
                 <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold tracking-wider uppercase {{ $invoice->status === 'paid' ? 'bg-primary/15 text-primary border border-primary/30' : 'bg-secondary/15 text-secondary border border-secondary/30' }}">
                     <span class="size-2 rounded-full {{ $invoice->status === 'paid' ? 'bg-primary' : 'bg-secondary animate-pulse' }}"></span>
                     @if ($invoice->status === 'paid')
-                        Orden Pagada • En Proceso de Entrega
+                        {{ oasis_t('Orden Pagada • En Proceso de Entrega') }}
                     @elseif ($existingTicket)
-                        Comprobante Enviado • En Sala P2P
+                        {{ oasis_t('Comprobante Enviado • En Sala P2P') }}
                     @else
-                        Pendiente de Transferencia P2P
+                        {{ oasis_t('Pendiente de Transferencia P2P') }}
                     @endif
                 </span>
             </div>
             <h1 class="text-2xl sm:text-3xl font-extrabold text-base mt-1.5">
-                Caja de Liquidación P2P #{{ $invRef }}
+                {{ oasis_t('Caja de Liquidación P2P') }} #{{ $invRef }}
             </h1>
         </div>
 

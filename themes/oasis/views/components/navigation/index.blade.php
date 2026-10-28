@@ -28,7 +28,7 @@
                                || $url === '/' 
                                || $url === url('/') 
                                || $url === url('/home');
-                        $label = in_array($name, ['tienda', 'shop', 'store']) ? 'Categorías' : $nav['name'];
+                        $label = in_array($name, ['tienda', 'shop', 'store']) ? oasis_t('Categorías') : oasis_t($nav['name']);
                     @endphp
                     @if ($isHome)
                         @continue
@@ -49,7 +49,7 @@
                                 <x-navigation.link
                                     :href="$child['url']"
                                     :spa="isset($child['spa']) ? $nav['spa'] : true">
-                                    {{ $child['name'] }}
+                                    {{ oasis_t($child['name']) }}
                                 </x-navigation.link>
                                 @endforeach
                             </x-slot:content>

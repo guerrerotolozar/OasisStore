@@ -13,24 +13,24 @@
         <div class="oasis-step oasis-step-done">
             <span class="oasis-step-num">✓</span>
             <div>
-                <p class="font-bold text-xs leading-tight">1. Orden P2P Emitida</p>
-                <p class="text-[11px] text-muted">Comprobante registrado en bóveda</p>
+                <p class="font-bold text-xs leading-tight">{{ oasis_t('1. Orden P2P Emitida') }}</p>
+                <p class="text-[11px] text-muted">{{ oasis_t('Comprobante registrado en bóveda') }}</p>
             </div>
         </div>
         <div class="oasis-step {{ $ticket->status === 'closed' ? 'oasis-step-done' : 'oasis-step-active' }}">
             <span class="oasis-step-num">{{ $ticket->status === 'closed' ? '✓' : '2' }}</span>
             <div>
-                <p class="font-bold text-xs leading-tight">2. Sala de Validación P2P</p>
+                <p class="font-bold text-xs leading-tight">{{ oasis_t('2. Sala de Validación P2P') }}</p>
                 <p class="text-[11px] text-muted">
-                    {{ $ticket->status === 'closed' ? 'Verificación finalizada' : 'Revisión directa con Administrador' }}
+                    {{ $ticket->status === 'closed' ? oasis_t('Verificación finalizada') : oasis_t('Revisión directa con Administrador') }}
                 </p>
             </div>
         </div>
         <div class="oasis-step {{ $ticket->status === 'closed' ? 'oasis-step-active' : '' }}">
             <span class="oasis-step-num">3</span>
             <div>
-                <p class="font-bold text-xs leading-tight">3. Liberación de Paquete</p>
-                <p class="text-[11px] text-muted">Activación inmediata tras validar</p>
+                <p class="font-bold text-xs leading-tight">{{ oasis_t('3. Liberación de Paquete') }}</p>
+                <p class="text-[11px] text-muted">{{ oasis_t('Activación inmediata tras validar') }}</p>
             </div>
         </div>
     </div>
@@ -40,16 +40,16 @@
         <div>
             <div class="flex flex-wrap items-center gap-2">
                 <span class="oasis-mono-pill px-2.5 py-0.5 rounded-md bg-primary/15 text-primary border border-primary/30 font-bold">
-                    SALA P2P #{{ $ticket->id }}
+                    {{ oasis_t('SALA P2P') }} #{{ $ticket->id }}
                 </span>
                 <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider {{ $ticket->status == 'open' ? 'bg-primary/15 text-primary border border-primary/30' : ($ticket->status == 'closed' ? 'bg-neutral text-muted' : 'bg-secondary/15 text-secondary border border-secondary/30') }}">
                     <span class="size-1.5 rounded-full {{ $ticket->status == 'open' ? 'bg-primary animate-pulse' : 'bg-secondary' }}"></span>
                     @if ($ticket->status == 'open')
-                        En Revisión Activa
+                        {{ oasis_t('En Revisión Activa') }}
                     @elseif ($ticket->status == 'closed')
-                        Orden Cerrada
+                        {{ oasis_t('Orden Cerrada') }}
                     @else
-                        Respuesta del Admin
+                        {{ oasis_t('Respuesta del Admin') }}
                     @endif
                 </span>
             </div>
@@ -60,7 +60,7 @@
 
         <a href="{{ route('dashboard') }}" wire:navigate
            class="px-3.5 py-2 rounded-xl text-xs font-semibold border bg-background-secondary border-neutral text-muted hover:text-base transition self-start sm:self-auto">
-            ← Volver a Mi Panel
+            {{ oasis_t('← Volver a Mi Panel') }}
         </a>
     </div>
 
@@ -81,7 +81,7 @@
                                 <div class="flex items-center gap-2">
                                     <span class="text-sm font-bold text-base">{{ $message->user->name }}</span>
                                     <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded {{ $isClient ? 'bg-background-secondary text-muted border border-neutral' : 'bg-primary/20 text-primary' }}">
-                                        {{ $isClient ? ($index === 0 ? 'Comprobante Inicial' : 'Cliente') : 'Administrador Oasis' }}
+                                        {{ $isClient ? ($index === 0 ? oasis_t('Comprobante Inicial') : oasis_t('Cliente')) : oasis_t('Administrador Oasis') }}
                                     </span>
                                 </div>
                             </div>
@@ -122,11 +122,11 @@
                                     <button type="button"
                                             @click="openReceipt(@js($attachment->url), @js($attachment->filename))"
                                             class="text-[11px] font-bold text-primary hover:underline flex items-center gap-1">
-                                        🔍 Ampliar captura
+                                        {{ oasis_t('🔍 Ampliar captura') }}
                                     </button>
                                     <a href="{{ $attachment->url }}" target="_blank" rel="noopener"
                                        class="text-[11px] text-muted hover:text-base">
-                                        ↗ Original
+                                        {{ oasis_t('↗ Original') }}
                                     </a>
                                 </div>
                             </div>
@@ -151,9 +151,9 @@
                     <div class="flex items-center justify-between">
                         <label for="oasis-direct-msg" class="text-xs font-bold uppercase tracking-wider text-muted flex items-center gap-1.5">
                             <span class="size-2 rounded-full bg-primary"></span>
-                            Chat Directo con el Validador P2P
+                            {{ oasis_t('Chat Directo con el Validador P2P') }}
                         </label>
-                        <span class="text-[11px] text-muted">Respuesta en tiempo real</span>
+                        <span class="text-[11px] text-muted">{{ oasis_t('Respuesta en tiempo real') }}</span>
                     </div>
 
                     <div class="oasis-composer space-y-3">
@@ -161,7 +161,7 @@
                                   wire:model="message"
                                   rows="2"
                                   required
-                                  placeholder="Escribe aquí cualquier dato adicional (ej. ID de jugador, nota sobre tu transferencia o consulta rápida)..."
+                                  placeholder="{{ oasis_t('Escribe aquí cualquier dato adicional (ej. ID de jugador, nota sobre tu transferencia o consulta rápida)...') }}"
                                   @keydown.ctrl.enter="$el.form.requestSubmit()"></textarea>
 
                         <!-- Píldoras de archivos seleccionados para subir -->
@@ -179,7 +179,7 @@
                             <div class="flex items-center gap-2">
                                 <label class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background-secondary border border-neutral hover:border-primary text-xs font-semibold text-muted hover:text-base transition">
                                     <x-ri-image-add-line class="size-4 text-primary" />
-                                    <span>Adjuntar imagen / PDF</span>
+                                    <span>{{ oasis_t('Adjuntar imagen / PDF') }}</span>
                                     <input type="file"
                                            wire:model="attachments"
                                            multiple
@@ -189,14 +189,14 @@
 
                                 <span wire:loading wire:target="attachments" class="text-xs text-primary font-semibold flex items-center gap-1">
                                     <x-ri-loader-5-fill class="size-3.5 animate-spin" />
-                                    Cargando archivo...
+                                    {{ oasis_t('Cargando archivo...') }}
                                 </span>
                             </div>
 
                             <x-button.primary type="submit" class="!w-auto px-5 py-2 text-xs font-bold" wire:loading.attr="disabled">
                                 <x-loading target="save" />
                                 <div wire:loading.remove wire:target="save" class="flex items-center gap-1.5">
-                                    <span>Enviar Mensaje</span>
+                                    <span>{{ oasis_t('Enviar Mensaje') }}</span>
                                     <span>→</span>
                                 </div>
                             </x-button.primary>
@@ -211,7 +211,7 @@
         <!-- Columna Derecha (Sticky): Ficha / Voucher de Estado de la Orden P2P -->
         <div class="oasis-voucher oasis-sticky-panel p-6 space-y-5">
             <div class="flex items-center justify-between">
-                <span class="text-xs font-bold uppercase tracking-wider text-primary">Ficha de Custodia P2P</span>
+                <span class="text-xs font-bold uppercase tracking-wider text-primary">{{ oasis_t('Ficha de Custodia P2P') }}</span>
                 <span class="oasis-mono-pill px-2 py-0.5 rounded bg-background border border-neutral text-muted">
                     ID #{{ $ticket->id }}
                 </span>
@@ -219,21 +219,21 @@
 
             <div class="space-y-3 text-sm">
                 <div class="flex items-center justify-between">
-                    <span class="text-muted">Estado actual:</span>
+                    <span class="text-muted">{{ oasis_t('Estado actual:') }}</span>
                     <span class="font-bold {{ $ticket->status == 'open' ? 'text-primary' : 'text-base' }}">
-                        {{ $ticket->status == 'open' ? 'Validando Comprobante' : ucfirst($ticket->status) }}
+                        {{ $ticket->status == 'open' ? oasis_t('Validando Comprobante') : ucfirst($ticket->status) }}
                     </span>
                 </div>
 
                 <div class="flex items-center justify-between">
-                    <span class="text-muted">Apertura:</span>
+                    <span class="text-muted">{{ oasis_t('Apertura:') }}</span>
                     <span class="font-semibold text-base oasis-mono-pill">{{ $ticket->created_at->format('d M Y, H:i') }}</span>
                 </div>
 
                 @if ($ticket->service)
                 <div class="pt-2 border-t border-neutral/60">
-                    <span class="text-xs text-muted block">Paquete vinculado:</span>
-                    <span class="font-bold text-base">{{ $ticket->service->product->name }}</span>
+                    <span class="text-xs text-muted block">{{ oasis_t('Paquete vinculado:') }}</span>
+                    <span class="font-bold text-base">{{ oasis_t($ticket->service->product->name) }}</span>
                 </div>
                 @endif
             </div>
@@ -243,10 +243,10 @@
             <!-- Garantía de Entrega P2P -->
             <div class="rounded-xl bg-background/70 border border-neutral p-3.5 space-y-2 text-xs">
                 <p class="font-bold text-base flex items-center gap-1.5">
-                    <span class="text-primary">⚡</span> Notificación Push Enviada
+                    <span class="text-primary">⚡</span> {{ oasis_t('Notificación Push Enviada') }}
                 </p>
                 <p class="text-muted leading-relaxed">
-                    Tu comprobante está almacenado en bóveda privada y nuestro administrador ya recibió la alerta directa en su dispositivo móvil.
+                    {{ oasis_t('Tu comprobante está almacenado en bóveda privada y nuestro administrador ya recibió la alerta directa en su dispositivo móvil.') }}
                 </p>
             </div>
 
@@ -255,7 +255,7 @@
                 <button type="button"
                         wire:click="closeTicket"
                         class="w-full py-2 px-3 rounded-xl border border-neutral hover:border-red-500/50 text-xs font-semibold text-muted hover:text-red-400 transition">
-                    Marcar orden como resuelta / Cerrar sala
+                    {{ oasis_t('Marcar orden como resuelta / Cerrar sala') }}
                 </button>
             </div>
             @endif
@@ -271,16 +271,16 @@
             <div class="flex items-center justify-between gap-4 border-b border-neutral pb-3">
                 <div class="flex items-center gap-2 overflow-hidden">
                     <span class="text-primary">🧾</span>
-                    <h3 class="text-sm font-bold text-base truncate" x-text="lightboxTitle">Comprobante</h3>
+                    <h3 class="text-sm font-bold text-base truncate" x-text="lightboxTitle">{{ oasis_t('Comprobante') }}</h3>
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
                     <a :href="lightboxSrc" target="_blank" rel="noopener"
                        class="px-2.5 py-1 rounded-lg bg-background-secondary border border-neutral text-xs font-semibold text-muted hover:text-base">
-                        ↗ Pestaña nueva
+                        {{ oasis_t('↗ Pestaña nueva') }}
                     </a>
                     <form method="dialog">
                         <button type="submit" class="px-2.5 py-1 rounded-lg bg-primary/20 text-primary text-xs font-bold hover:bg-primary/30">
-                            ✕ Cerrar
+                            {{ oasis_t('✕ Cerrar') }}
                         </button>
                     </form>
                 </div>

@@ -30,9 +30,13 @@ echo "==================================================================\n";
 echo "🚀 Aprovisionando Catálogo, Pasarela OasisP2P y Prueba Arturo-Api\n";
 echo "==================================================================\n";
 
-// 1. Asegurar Tema Oasis y Logo Only
+// 1. Asegurar Tema Oasis, Logo Only, URL Oficial e Idiomas Permitidos (Solo ES y EN)
 Setting::updateOrCreate(['key' => 'theme'], ['value' => 'oasis']);
 Setting::updateOrCreate(['key' => 'theme_oasis_logo_display'], ['value' => 'logo-only']);
+Setting::updateOrCreate(['key' => 'allowed_languages'], ['value' => json_encode(['es', 'en'])]);
+$appUrl = env('APP_URL', 'http://100.103.230.95:8085');
+Setting::updateOrCreate(['key' => 'app_url'], ['value' => $appUrl]);
+config(['app.url' => $appUrl]);
 
 // 2. Asegurar divisas del sistema (COP, USD, MXN)
 $cop = Currency::updateOrCreate(
@@ -121,13 +125,27 @@ if (!$plan) {
 }
 
 $plan->prices()->updateOrCreate(
-    ['currency_code' => $currency->code],
+    ['currency_code' => $cop->code],
+    [
+        'price' => 40000.00,
+        'setup_fee' => 0.00,
+    ]
+);
+$plan->prices()->updateOrCreate(
+    ['currency_code' => $usd->code],
     [
         'price' => 10.00,
         'setup_fee' => 0.00,
     ]
 );
-echo "✔ Producto de muestra listo: {$product->name} (\$10.00 {$currency->code})\n";
+$plan->prices()->updateOrCreate(
+    ['currency_code' => $mxn->code],
+    [
+        'price' => 190.00,
+        'setup_fee' => 0.00,
+    ]
+);
+echo "✔ Producto de muestra listo: {$product->name} (COP, USD, MXN)\n";
 
 // 6. Limpiar caché de Laravel/Paymenter
 \App\Providers\SettingsProvider::flushCache();

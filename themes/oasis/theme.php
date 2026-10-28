@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/helpers.php';
+
 return [
     'name' => 'Oasis Premium Storefront',
     'author' => 'OasisStore',

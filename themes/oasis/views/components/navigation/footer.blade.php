@@ -9,19 +9,19 @@
                     @endif
                 </div>
                 <div class="text-xs text-muted">
-                    © {{ date('Y') }} {{ config('app.name') }}. Todos los derechos reservados.
+                    © {{ date('Y') }} {{ config('app.name') }}. {{ oasis_t('Todos los derechos reservados.') }}
                 </div>
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
                 <span class="px-3 py-1 rounded-full text-xs font-semibold bg-background border border-neutral text-muted">
-                    Transferencia P2P
+                    {{ oasis_t('Transferencia P2P') }}
                 </span>
                 <span class="px-3 py-1 rounded-full text-xs font-semibold bg-background border border-neutral text-muted">
-                    USDT / Crypto
+                    {{ oasis_t('USDT / Crypto') }}
                 </span>
                 <span class="px-3 py-1 rounded-full text-xs font-semibold bg-primary/15 border border-primary/30 text-primary">
-                    Entrega Digital Verificada
+                    {{ oasis_t('Entrega Digital Verificada') }}
                 </span>
             </div>
         </div>

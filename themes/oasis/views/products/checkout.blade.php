@@ -1,25 +1,28 @@
+@php
+    require_once base_path('themes/oasis/helpers.php');
+@endphp
 <div class="container mt-8 space-y-6">
     <!-- Pipeline P2P de 3 Pasos -->
     <div class="oasis-pipeline">
         <div class="oasis-step oasis-step-active">
             <span class="oasis-step-num">1</span>
             <div>
-                <p class="font-bold text-xs leading-tight">1. Configuración de Paquete</p>
-                <p class="text-[11px] text-muted">Revisa el contenido de tu recarga</p>
+                <p class="font-bold text-xs leading-tight">{{ oasis_t('1. Configuración de Paquete') }}</p>
+                <p class="text-[11px] text-muted">{{ oasis_t('Revisa el contenido de tu recarga') }}</p>
             </div>
         </div>
         <div class="oasis-step">
             <span class="oasis-step-num">2</span>
             <div>
-                <p class="font-bold text-xs leading-tight">2. Emisión de Orden P2P</p>
-                <p class="text-[11px] text-muted">Generación de folio único</p>
+                <p class="font-bold text-xs leading-tight">{{ oasis_t('2. Emisión de Orden P2P') }}</p>
+                <p class="text-[11px] text-muted">{{ oasis_t('Generación de folio único') }}</p>
             </div>
         </div>
         <div class="oasis-step">
             <span class="oasis-step-num">3</span>
             <div>
-                <p class="font-bold text-xs leading-tight">3. Pago & Entrega Directa</p>
-                <p class="text-[11px] text-muted">SPEI / USDT + Validación inmediata</p>
+                <p class="font-bold text-xs leading-tight">{{ oasis_t('3. Pago & Entrega Directa') }}</p>
+                <p class="text-[11px] text-muted">{{ oasis_t('SPEI / USDT + Validación inmediata') }}</p>
             </div>
         </div>
     </div>
@@ -28,10 +31,10 @@
         <a href="{{ route('category.show', ['category' => $product->category->slug]) }}"
            wire:navigate
            class="px-3.5 py-2 rounded-xl text-xs font-semibold border bg-background-secondary border-neutral text-muted hover:text-base transition">
-            ← Volver al Catálogo
+            {{ oasis_t('← Volver al Catálogo') }}
         </a>
         <span class="oasis-mono-pill px-3 py-1 rounded-full bg-primary/15 text-primary border border-primary/30 font-bold uppercase">
-            BÓVEDA DIGITAL OASIS
+            {{ oasis_t('BÓVEDA DIGITAL OASIS') }}
         </span>
     </div>
 
@@ -52,16 +55,16 @@
                 <div class="space-y-2">
                     <div class="flex flex-wrap items-center gap-2">
                         <span class="oasis-mono-pill px-2 py-0.5 rounded bg-primary/15 text-primary border border-primary/30 font-bold uppercase">
-                            {{ $product->category->name }}
+                            {{ oasis_t($product->category->name) }}
                         </span>
                         @if ($product->stock > 0)
-                        <span class="text-xs font-semibold text-secondary">● {{ $product->stock }} disponibles en bóveda</span>
+                        <span class="text-xs font-semibold text-secondary">● {{ $product->stock }} {{ oasis_t('disponibles en bóveda') }}</span>
                         @endif
                     </div>
-                    <h1 class="text-2xl sm:text-3xl font-extrabold text-base">{{ $product->name }}</h1>
+                    <h1 class="text-2xl sm:text-3xl font-extrabold text-base">{{ oasis_t($product->name) }}</h1>
                     @if ($product->description)
                     <article class="prose dark:prose-invert prose-sm text-muted max-w-none pt-1 [&_ul]:my-2 [&_ul]:space-y-1 [&_li]:text-xs [&_strong]:text-base [&_code]:text-primary [&_code]:bg-primary/10 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded">
-                        {!! Str::markdown($product->description) !!}
+                        {!! Str::markdown(oasis_t($product->description)) !!}
                     </article>
                     @endif
                 </div>
@@ -151,11 +154,11 @@
         <div class="oasis-voucher oasis-sticky-panel p-6 space-y-5">
             <div class="flex items-center justify-between">
                 <div>
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-primary block">Orden Express</span>
-                    <h2 class="text-lg font-extrabold text-base">Boleto de Reserva</h2>
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-primary block">{{ oasis_t('Orden Express') }}</span>
+                    <h2 class="text-lg font-extrabold text-base">{{ oasis_t('Boleto de Reserva') }}</h2>
                 </div>
                 <span class="oasis-mono-pill px-2.5 py-1 rounded bg-background border border-neutral text-muted font-bold">
-                    1 PAQUETE
+                    {{ oasis_t('1 PAQUETE') }}
                 </span>
             </div>
 
@@ -163,16 +166,16 @@
 
             <div class="space-y-2.5 text-sm">
                 <div class="flex justify-between text-muted">
-                    <span>Paquete seleccionado:</span>
-                    <span class="font-semibold text-base text-right">{{ $product->name }}</span>
+                    <span>{{ oasis_t('Paquete seleccionado:') }}</span>
+                    <span class="font-semibold text-base text-right">{{ oasis_t($product->name) }}</span>
                 </div>
                 <div class="flex justify-between text-muted">
-                    <span>Modalidad:</span>
-                    <span class="oasis-mono-pill text-primary font-bold">Pago Único P2P</span>
+                    <span>{{ oasis_t('Modalidad:') }}</span>
+                    <span class="oasis-mono-pill text-primary font-bold">{{ oasis_t('Pago Único P2P') }}</span>
                 </div>
                 @if ($total->total_tax > 0)
                 <div class="flex justify-between text-muted">
-                    <span>Subtotal:</span>
+                    <span>{{ oasis_t('Subtotal:') }}</span>
                     <span class="font-semibold text-base oasis-mono-pill">{{ $total->format($total->subtotal) }}</span>
                 </div>
                 <div class="flex justify-between text-muted">
@@ -185,7 +188,7 @@
             <div class="oasis-voucher-divider"></div>
 
             <div class="flex justify-between items-baseline">
-                <span class="text-xs font-bold uppercase tracking-wider text-muted">Total del Paquete</span>
+                <span class="text-xs font-bold uppercase tracking-wider text-muted">{{ oasis_t('Total del Paquete') }}</span>
                 <span class="text-2xl sm:text-3xl font-extrabold text-primary oasis-mono-pill">{{ $total }}</span>
             </div>
 
@@ -193,7 +196,7 @@
             <x-button.primary wire:click="checkout" wire:loading.attr="disabled" class="w-full py-3.5 font-extrabold text-sm shadow-lg">
                 <x-loading target="checkout" />
                 <div wire:loading.remove wire:target="checkout" class="flex items-center justify-center gap-2">
-                    <span>Preparar Orden en Terminal P2P</span>
+                    <span>{{ oasis_t('Preparar Orden en Terminal P2P') }}</span>
                     <span>→</span>
                 </div>
             </x-button.primary>

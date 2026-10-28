@@ -1,4 +1,5 @@
 @php
+    require_once base_path('themes/oasis/helpers.php');
     $cart = \App\Classes\Cart::getOnce();
     // Fuente de verdad única: sesión -> carrito existente -> default de configuración
     $activeCurr = session('currency') ?? ($cart->exists ? $cart->currency_code : config('settings.default_currency', 'COP'));
@@ -8,7 +9,8 @@
     
     // Consulta dinámica de monedas configuradas en el panel administrativo
     $currencies = \App\Models\Currency::all();
-    $locales = config('settings.allowed_languages', []);
+    // Restringir estrictamente el catálogo lingüístico a Español e Inglés
+    $locales = ['es', 'en'];
 @endphp
 
 <div class="relative" x-data="{ open: false }" @click.outside="open = false">
@@ -16,7 +18,7 @@
     <button type="button"
             @click="open = !open"
             class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral/60 bg-background-secondary/80 hover:bg-neutral/20 transition text-sm text-base font-semibold text-nowrap cursor-pointer shadow-sm">
-        <span>{{ config('app.available_locales')[app()->getLocale()] ?? 'Español' }}</span>
+        <span>{{ config('app.available_locales')[app()->getLocale()] ?? (app()->getLocale() === 'en' ? 'English' : 'Español') }}</span>
         <span class="text-base/40">|</span>
         <span class="text-primary font-bold">{{ $activeCurr }}</span>
         <svg :class="{ '-rotate-180': open }" class="w-4 h-4 text-muted transition-transform duration-200 ml-0.5" viewBox="0 0 20 20" fill="currentColor">
@@ -24,10 +26,7 @@
         </svg>
     </button>
 
-    <!-- Menú Desplegable con Medidas Responsivas Reales:
-         - En móvil (drawer a la izquierda): left-0 para no desbordarse por la izquierda.
-         - En escritorio (navbar a la derecha): sm:left-auto sm:right-0 para abrirse hacia adentro.
-         - Ancho estándar w-64 sm:w-72: suficiente para textos sin colisión ni saltos raros. -->
+    <!-- Menú Desplegable con Medidas Responsivas Reales -->
     <div x-show="open"
          x-transition:enter="transition ease-out duration-150"
          x-transition:enter-start="opacity-0 scale-95 -translate-y-1"
@@ -41,7 +40,7 @@
         <!-- Lista Dinámica de Monedas (Desde la Base de Datos) -->
         <div>
             <div class="text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5 px-1">
-                Moneda de Pago
+                {{ oasis_t('Moneda de Pago') }}
             </div>
             
             <div class="space-y-1">
@@ -76,7 +75,7 @@
                             {{ substr($curr->code, 0, 2) }}
                         </div>
                         @endif
-                        <span class="text-xs whitespace-nowrap">{{ $curr->name }}</span>
+                        <span class="text-xs whitespace-nowrap">{{ oasis_t($curr->name) }}</span>
                     </div>
                     <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-primary/20 text-primary shrink-0 ml-auto">{{ $curr->code }}</span>
                 </a>
@@ -87,11 +86,11 @@
         <!-- Selector de Idioma (si está habilitado más de un idioma) -->
         @if(count($locales) > 1)
         <div class="pt-2 border-t border-neutral/60">
-            <strong class="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1 px-1"> Idioma </strong>
+            <strong class="block text-[10px] font-bold uppercase tracking-wider text-muted mb-1 px-1"> {{ oasis_t('Idioma') }} </strong>
             <x-select wire:model.live="currentLocale" :options="collect($locales)->map(fn($code) => [
                 'value' => $code,
                 'label' => config('app.available_locales')[$code] ?? $code
-                ])->values()->toArray()" placeholder="Seleccionar idioma" />
+                ])->values()->toArray()" placeholder="{{ oasis_t('Seleccionar idioma') }}" />
         </div>
         @endif
     </div>

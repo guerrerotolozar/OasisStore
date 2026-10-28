@@ -5,7 +5,7 @@
         : null;
 @endphp
 
-<x-modal :title="'Pago P2P — Factura #' . ($invoice->number ?: $invoice->id)" open>
+<x-modal :title="oasis_t('Pago P2P — Factura #') . ($invoice->number ?: $invoice->id)" open>
     <x-slot name="closeTrigger">
         <div class="flex items-center gap-4">
             <span class="text-sm font-bold text-primary">{{ $invoice->formattedRemaining }}</span>
