@@ -315,4 +315,46 @@
         font-size: 0.72rem;
         letter-spacing: 0.04em;
     }
+
+    /* ==========================================================================
+       FILAMENT ADMIN — DEPURA Y COMPACTA EL PANEL ADMINISTRATIVO OASISSTORE
+       ========================================================================== */
+    /* 1. Suprime módulos irrelevantes para venta de activos gamer P2P */
+    li.fi-sidebar-item:has(a[href*="/admin/servers"]),
+    li.fi-sidebar-item:has(a[href*="/admin/oauth-clients"]),
+    li.fi-sidebar-item:has(a[href*="/admin/custom-properties"]),
+    li.fi-sidebar-item:has(a[href*="/admin/roles"]),
+    li.fi-sidebar-item:has(a[href*="/admin/extensions"]),
+    li.fi-sidebar-item:has(a[href*="/admin/updates"]),
+    li.fi-sidebar-item:has(a[href*="/admin/api"]),
+    li.fi-sidebar-item:has(a[href*="/admin/audits"]),
+    li.fi-sidebar-item:has(a[href*="/admin/cron-stats"]),
+    li.fi-sidebar-item:has(a[href*="/admin/email-logs"]),
+    li.fi-sidebar-item:has(a[href*="/admin/failed-jobs"]),
+    li.fi-sidebar-item:has(a[href*="/admin/notification-templates"]),
+    li.fi-sidebar-item:has(a[href*="/admin/error-logs"]),
+    li.fi-sidebar-item:has(a[href*="/admin/http-logs"]),
+    li.fi-sidebar-item:has(a[href*="/admin/adjustment-notes"]),
+    li.fi-sidebar-item:has(a[href*="/admin/tax-rates"]),
+    li.fi-sidebar-item:has(a[href*="/admin/config-options"]),
+    li.fi-sidebar-item:has(a[href*="/admin/service-cancellations"]) {
+        display: none !important;
+    }
+
+    /* 2. Suprime grupos enteros que quedaron vacíos */
+    li.fi-sidebar-group[data-group-label="Other"] {
+        display: none !important;
+    }
+
+    /* 3. Oculta el widget de relleno 'Active Users' en el Escritorio */
+    .fi-wi:has(a[href*="/admin/users/"]),
+    section.fi-section:has(a[href*="/admin/users/"]) {
+        display: none !important;
+    }
+
+    /* 4. Pulido visual del Sidebar Filament */
+    .fi-sidebar-nav {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(148, 163, 184, 0.25) transparent;
+    }
 </style>
