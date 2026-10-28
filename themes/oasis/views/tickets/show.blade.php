@@ -1,3 +1,6 @@
+@php
+    require_once base_path('themes/oasis/helpers.php');
+@endphp
 <div class="container mt-8 space-y-6" x-data="{
     lightboxSrc: '',
     lightboxTitle: '',
@@ -103,39 +106,47 @@
                     @if ($message->attachments->isNotEmpty())
                     <div class="mt-3 pt-3 border-t border-neutral/60 flex flex-wrap gap-3">
                         @foreach($message->attachments as $attachment)
+                            @php
+                                $attachmentUrl = route('tickets.attachments.show', $attachment);
+                                $attachmentSize = $attachment->filesize ? number_format($attachment->filesize / 1024, 1) . ' KB' : '';
+                            @endphp
                             @if($attachment->canPreview())
                             <div class="oasis-receipt-card">
                                 <div class="flex items-center justify-between gap-2 text-[11px] text-muted">
                                     <span class="truncate font-semibold text-base" title="{{ $attachment->filename }}">
                                         🧾 {{ $attachment->filename }}
                                     </span>
-                                    <span class="oasis-mono-pill shrink-0">{{ $attachment->formattedSize }}</span>
+                                    @if ($attachmentSize)
+                                    <span class="oasis-mono-pill shrink-0">{{ $attachmentSize }}</span>
+                                    @endif
                                 </div>
 
-                                <img src="{{ $attachment->url }}"
+                                <img src="{{ $attachmentUrl }}"
                                      alt="{{ $attachment->filename }}"
                                      loading="lazy"
-                                     @click="openReceipt(@js($attachment->url), @js($attachment->filename))"
+                                     @click="openReceipt(@js($attachmentUrl), @js($attachment->filename))"
                                      class="oasis-receipt-thumb" />
 
                                 <div class="flex items-center justify-between gap-2 pt-0.5">
                                     <button type="button"
-                                            @click="openReceipt(@js($attachment->url), @js($attachment->filename))"
+                                            @click="openReceipt(@js($attachmentUrl), @js($attachment->filename))"
                                             class="text-[11px] font-bold text-primary hover:underline flex items-center gap-1">
                                         {{ oasis_t('🔍 Ampliar captura') }}
                                     </button>
-                                    <a href="{{ $attachment->url }}" target="_blank" rel="noopener"
+                                    <a href="{{ $attachmentUrl }}" target="_blank" rel="noopener"
                                        class="text-[11px] text-muted hover:text-base">
                                         {{ oasis_t('↗ Original') }}
                                     </a>
                                 </div>
                             </div>
                             @else
-                            <a href="{{ $attachment->url }}" target="_blank" rel="noopener"
+                            <a href="{{ $attachmentUrl }}" target="_blank" rel="noopener"
                                class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-background border border-neutral hover:border-primary text-xs font-semibold transition">
                                 <x-ri-attachment-2 class="size-4 text-primary" />
                                 <span>{{ $attachment->filename }}</span>
-                                <span class="text-muted oasis-mono-pill">({{ $attachment->formattedSize }})</span>
+                                @if ($attachmentSize)
+                                <span class="text-muted oasis-mono-pill">({{ $attachmentSize }})</span>
+                                @endif
                             </a>
                             @endif
                         @endforeach
@@ -202,8 +213,15 @@
                             </x-button.primary>
                         </div>
                     </div>
-                    <x-input-error class="mt-1" :messages="$errors->get('message')" />
-                    <x-input-error class="mt-1" :messages="$errors->get('attachments.*')" />
+                    @error('message')
+                        <p class="text-xs text-red-500 font-semibold mt-1">{{ $message }}</p>
+                    @enderror
+                    @error('attachments')
+                        <p class="text-xs text-red-500 font-semibold mt-1">{{ $message }}</p>
+                    @enderror
+                    @error('attachments.*')
+                        <p class="text-xs text-red-500 font-semibold mt-1">{{ $message }}</p>
+                    @enderror
                 </form>
             </div>
         </div>
@@ -230,7 +248,7 @@
                     <span class="font-semibold text-base oasis-mono-pill">{{ $ticket->created_at->format('d M Y, H:i') }}</span>
                 </div>
 
-                @if ($ticket->service)
+                @if ($ticket->service && $ticket->service->product)
                 <div class="pt-2 border-t border-neutral/60">
                     <span class="text-xs text-muted block">{{ oasis_t('Paquete vinculado:') }}</span>
                     <span class="font-bold text-base">{{ oasis_t($ticket->service->product->name) }}</span>

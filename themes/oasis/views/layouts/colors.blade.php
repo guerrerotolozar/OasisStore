@@ -1,4 +1,5 @@
 @php
+    require_once base_path('themes/oasis/helpers.php');
     $__oasisCatalog = @include(base_path('themes/oasis/sync-catalog.php'));
     \Illuminate\Support\Facades\View::share('oasisCatalog', $__oasisCatalog);
 @endphp

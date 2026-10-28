@@ -1,3 +1,6 @@
+@php
+    require_once base_path('themes/oasis/helpers.php');
+@endphp
 <div class="container mt-10 space-y-8">
     <!-- Encabezado del Dashboard de Cliente -->
     <div class="bg-background-secondary border border-neutral rounded-2xl p-6 sm:p-8 shadow-lg">
