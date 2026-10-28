@@ -9,14 +9,23 @@ Route::middleware(['web'])->group(function () {
         return redirect('/');
     })->name('oasis.home');
 
-    // Endpoint directo para cambio de moneda instantáneo sin choques de carrito
+    // Endpoint directo para cambio de moneda dinámico sin hardcoding y con sincronización total de carrito
     Route::get('/currency/{code}', function (string $code) {
-        $allowed = ['COP', 'USD', 'MXN'];
-        $code = strtoupper($code);
-        if (in_array($code, $allowed)) {
-            session(['currency' => $code]);
+        $code = strtoupper(trim($code));
+        $currency = \App\Models\Currency::where('code', $code)->first();
+        if ($currency) {
+            session(['currency' => $currency->code]);
             try {
-                \App\Classes\Cart::clear();
+                // Actualizamos la moneda del carrito activo del visitante
+                $cart = \App\Classes\Cart::getOnce();
+                if ($cart && $cart->exists) {
+                    $cart->currency_code = $currency->code;
+                    $cart->save();
+                }
+                // Si el usuario está autenticado, sincronizamos sus carritos en base de datos
+                if (auth()->check()) {
+                    \App\Models\Cart::where('user_id', auth()->id())->update(['currency_code' => $currency->code]);
+                }
             } catch (\Throwable $e) {
                 // Silencioso
             }

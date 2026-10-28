@@ -38,10 +38,14 @@ return (function (): ?array {
     $catalog['__asset_prefix'] = '/storage/' . $feedFolder;
     $catalog['__feed_folder'] = $feedFolder;
 
-    // Establecer COP como divisa inicial por defecto únicamente si el usuario no tiene ninguna seleccionada
+    // Sincronizar divisa inicial con el carrito existente o la configuración oficial de la tienda
     try {
         if (function_exists('session') && session()->isStarted() && !session()->has('currency')) {
-            session(['currency' => 'COP']);
+            $cart = \App\Classes\Cart::getOnce();
+            $initialCurrency = ($cart && $cart->exists && !empty($cart->currency_code))
+                ? $cart->currency_code
+                : config('settings.default_currency', 'COP');
+            session(['currency' => $initialCurrency]);
         }
     } catch (\Throwable $e) {
         // Ignorar en CLI
@@ -55,18 +59,18 @@ return (function (): ?array {
     }
 
     try {
-        // 1. Registrar Divisas Multimoneda Oficiales (COP, USD y MXN)
-        $cop = Currency::updateOrCreate(
+        // 1. Registrar Divisas Multimoneda Oficiales (Respetando ediciones del Admin Panel)
+        $cop = Currency::firstOrCreate(
             ['code' => 'COP'],
             ['name' => 'Peso Colombiano', 'prefix' => '$ ', 'suffix' => ' COP', 'format' => '1.000,00']
         );
-        $usd = Currency::updateOrCreate(
+        $usd = Currency::firstOrCreate(
             ['code' => 'USD'],
-            ['name' => 'Dólar (PayPal / Wise / USDT)', 'prefix' => '$', 'suffix' => ' USD', 'format' => '1,000.00']
+            ['name' => 'Dólar', 'prefix' => '$', 'suffix' => ' USD', 'format' => '1,000.00']
         );
-        $mxn = Currency::updateOrCreate(
+        $mxn = Currency::firstOrCreate(
             ['code' => 'MXN'],
-            ['name' => 'Peso Mexicano (SPEI)', 'prefix' => '$', 'suffix' => ' MXN', 'format' => '1,000.00']
+            ['name' => 'Peso Mexicano', 'prefix' => '$', 'suffix' => ' MXN', 'format' => '1,000.00']
         );
         Setting::updateOrCreate(['key' => 'default_currency'], ['value' => 'COP']);
 
