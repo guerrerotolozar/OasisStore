@@ -120,6 +120,8 @@ services:
       ARTURO_API_KEY: "${ARTURO_API_KEY:-}"
       ARTURO_VAULT_FOLDER: "${ARTURO_VAULT_FOLDER:-OPERACIONES/OasisStore}"
       ARTURO_LOG_TO_VAULT: "${ARTURO_LOG_TO_VAULT:-true}"
+    volumes:
+      - ./webhook-service/main.py:/srv/main.py:ro
     networks:
       - oasis_net
       - arturo-net

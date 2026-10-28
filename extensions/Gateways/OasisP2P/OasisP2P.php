@@ -81,6 +81,47 @@ class OasisP2P extends Gateway
                 'service_ids' => $heldServices,
             ]);
         });
+
+        // Escuchar cada nuevo mensaje enviado en tickets (Chat P2P directo y soporte)
+        TicketMessage::created(function (TicketMessage $message) {
+            // Ignorar el mensaje inicial automático que genera la subida del comprobante P2P
+            if (str_contains($message->message, 'Comprobante de Pago P2P recibido para validación')) {
+                return;
+            }
+
+            $ticket = $message->ticket()->first();
+            if (!$ticket) {
+                return;
+            }
+
+            // Intentar enlazar la factura vinculada
+            $invoice = null;
+            if ($ticket->service_id && $ticket->service) {
+                $invoice = $ticket->service->order?->invoice ?? $ticket->service->invoiceItem?->invoice;
+            }
+            if (!$invoice && preg_match('/Factura #([A-Za-z0-9\-]+)/i', $ticket->subject, $matches)) {
+                $invoice = Invoice::where('number', $matches[1])->orWhere('id', $matches[1])->first();
+            }
+
+            $sender = $message->user()->first();
+            $senderName = $sender?->name ?? 'Usuario';
+            $senderEmail = $sender?->email ?? '';
+            $isAdmin = $ticket->user_id !== $message->user_id;
+
+            $hasAttachments = $message->attachments()->exists();
+
+            (new self())->dispatchWebhookAsync('ticket.message_created', $invoice, [
+                'ticket_id' => $ticket->id,
+                'ticket_subject' => $ticket->subject,
+                'message_id' => $message->id,
+                'message_text' => $message->message,
+                'sender_id' => $message->user_id,
+                'sender_name' => $senderName,
+                'sender_email' => $senderEmail,
+                'is_admin' => $isAdmin,
+                'has_attachments' => $hasAttachments,
+            ]);
+        });
     }
 
     /**
@@ -458,7 +499,7 @@ class OasisP2P extends Gateway
     /**
      * Despacha el webhook fuera del ciclo de respuesta HTTP para no bloquear al usuario ni al Admin.
      */
-    protected function dispatchWebhookAsync(string $eventType, Invoice $invoice, array $extra = []): void
+    protected function dispatchWebhookAsync(string $eventType, ?Invoice $invoice = null, array $extra = []): void
     {
         $webhookUrl = $_ENV['OASIS_WEBHOOK_URL'] ?? getenv('OASIS_WEBHOOK_URL') ?: 'http://oasis-webhook:8000/webhook/paymenter';
         $webhookSecret = $_ENV['OASIS_WEBHOOK_SECRET'] ?? getenv('OASIS_WEBHOOK_SECRET') ?: '';
@@ -470,20 +511,30 @@ class OasisP2P extends Gateway
         $baseUrl = rtrim(config('app.url'), '/');
         $serviceId = $extra['service_id'] ?? ($extra['service_ids'][0] ?? null);
 
+        $invData = $invoice ? [
+            'id' => $invoice->id,
+            'number' => $invoice->number ?: (string) $invoice->id,
+            'status' => $invoice->status,
+            'total' => (string) $invoice->total,
+            'currency_code' => $invoice->currency_code ?? 'COP',
+            'user_name' => optional($invoice->user)->name ?? ($extra['sender_name'] ?? 'Cliente'),
+            'user_email' => optional($invoice->user)->email ?? ($extra['sender_email'] ?? 'sin-correo'),
+        ] : [
+            'id' => $extra['ticket_id'] ?? 0,
+            'number' => 'TICKET-' . ($extra['ticket_id'] ?? 0),
+            'status' => 'open',
+            'total' => '0.00',
+            'currency_code' => 'COP',
+            'user_name' => $extra['sender_name'] ?? 'Cliente',
+            'user_email' => $extra['sender_email'] ?? 'sin-correo',
+        ];
+
         $payload = [
             'event' => $eventType,
             'timestamp' => now()->toIso8601String(),
-            'invoice' => [
-                'id' => $invoice->id,
-                'number' => $invoice->number ?: (string) $invoice->id,
-                'status' => $invoice->status,
-                'total' => (string) $invoice->total,
-                'currency_code' => $invoice->currency_code ?? 'MXN',
-                'user_name' => optional($invoice->user)->name ?? 'Cliente',
-                'user_email' => optional($invoice->user)->email ?? 'sin-correo',
-            ],
+            'invoice' => $invData,
             'dashboard_links' => [
-                'admin_invoice_url' => "{$baseUrl}/admin/invoices/{$invoice->id}/edit",
+                'admin_invoice_url' => $invoice ? "{$baseUrl}/admin/invoices/{$invoice->id}/edit" : "{$baseUrl}/admin/tickets",
                 'admin_ticket_url' => isset($extra['ticket_id'])
                     ? "{$baseUrl}/admin/tickets/{$extra['ticket_id']}/edit"
                     : "{$baseUrl}/admin/tickets",

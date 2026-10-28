@@ -107,71 +107,94 @@ async def notify_discord(payload: PaymenterWebhookPayload) -> None:
     inv = payload.invoice
     meta = payload.meta
     is_paid = payload.event == "invoice.paid"
+    is_msg = payload.event == "ticket.message_created"
     inv_label = escape_discord_markdown(inv.number or inv.id)
 
-    title = (
-        f"✅ Factura #{inv_label} PAGADA — Orden en Pending Setup"
-        if is_paid
-        else f"🧾 Nuevo Comprobante P2P Privado — Factura #{inv_label}"
-    )
-    color = 0x10B981 if is_paid else 0x6366F1
+    if is_msg:
+        ticket_id = meta.get("ticket_id", inv.id)
+        sender_name = escape_discord_markdown(meta.get("sender_name", inv.user_name or "Cliente"))
+        is_admin = meta.get("is_admin", False)
+        msg_text = str(meta.get("message_text", "")).strip()
+        role_label = "Soporte" if is_admin else "Cliente"
 
-    safe_user = escape_discord_markdown(inv.user_name)
-    safe_email = escape_discord_markdown(inv.user_email)
-    safe_total = escape_discord_markdown(f"{inv.total} {inv.currency_code}")
-    safe_state = escape_discord_markdown(meta.get("order_state", inv.status))
+        title = f"💬 Mensaje en Ticket #{ticket_id} — {sender_name} ({role_label})"
+        color = 0x10B981 if is_admin else 0x3B82F6
+        fields = [
+            {
+                "name": "Mensaje",
+                "value": f"> {escape_discord_markdown(msg_text[:1000])}" if msg_text else "*(Archivo adjunto)*",
+                "inline": False,
+            },
+            {
+                "name": "Acción",
+                "value": f"🎫 [Abrir Ticket en Dashboard]({payload.dashboard_links.admin_ticket_url})",
+                "inline": False,
+            },
+        ]
+    else:
+        title = (
+            f"✅ Factura #{inv_label} PAGADA — Orden en Pending Setup"
+            if is_paid
+            else f"🧾 Nuevo Comprobante P2P Privado — Factura #{inv_label}"
+        )
+        color = 0x10B981 if is_paid else 0x6366F1
 
-    fields = [
-        {"name": "Cliente", "value": f"{safe_user} (`{safe_email}`)", "inline": True},
-        {"name": "Monto", "value": f"**{safe_total}**", "inline": True},
-        {"name": "Estado", "value": f"`{safe_state}`", "inline": True},
-    ]
+        safe_user = escape_discord_markdown(inv.user_name)
+        safe_email = escape_discord_markdown(inv.user_email)
+        safe_total = escape_discord_markdown(f"{inv.total} {inv.currency_code}")
+        safe_state = escape_discord_markdown(meta.get("order_state", inv.status))
 
-    if meta.get("payment_channel"):
+        fields = [
+            {"name": "Cliente", "value": f"{safe_user} (`{safe_email}`)", "inline": True},
+            {"name": "Monto", "value": f"**{safe_total}**", "inline": True},
+            {"name": "Estado", "value": f"`{safe_state}`", "inline": True},
+        ]
+
+        if meta.get("payment_channel"):
+            fields.append(
+                {
+                    "name": "Método P2P",
+                    "value": escape_discord_markdown(meta["payment_channel"]),
+                    "inline": True,
+                }
+            )
+        if meta.get("transaction_ref"):
+            fields.append(
+                {
+                    "name": "Referencia / TxID",
+                    "value": f"`{escape_discord_markdown(meta['transaction_ref'])}`",
+                    "inline": True,
+                }
+            )
+        if meta.get("player_identifier"):
+            fields.append(
+                {
+                    "name": "ID Destino",
+                    "value": f"`{escape_discord_markdown(meta['player_identifier'])}`",
+                    "inline": True,
+                }
+            )
+
+        links_lines = [
+            f"🔗 [Abrir Factura en Admin Dashboard]({payload.dashboard_links.admin_invoice_url})",
+            f"🎫 [Abrir Ticket en Admin Dashboard]({payload.dashboard_links.admin_ticket_url})",
+        ]
+        if payload.dashboard_links.admin_service_url:
+            links_lines.append(
+                f"📦 [Activar Servicio Manualmente]({payload.dashboard_links.admin_service_url})"
+            )
+        if payload.dashboard_links.protected_receipt_url:
+            links_lines.append(
+                f"🔒 [Descargar Comprobante (Requiere Login Admin)]({payload.dashboard_links.protected_receipt_url})"
+            )
+
         fields.append(
             {
-                "name": "Método P2P",
-                "value": escape_discord_markdown(meta["payment_channel"]),
-                "inline": True,
+                "name": "Acciones en Dashboard (Privado)",
+                "value": "\n".join(links_lines),
+                "inline": False,
             }
         )
-    if meta.get("transaction_ref"):
-        fields.append(
-            {
-                "name": "Referencia / TxID",
-                "value": f"`{escape_discord_markdown(meta['transaction_ref'])}`",
-                "inline": True,
-            }
-        )
-    if meta.get("player_identifier"):
-        fields.append(
-            {
-                "name": "ID Destino",
-                "value": f"`{escape_discord_markdown(meta['player_identifier'])}`",
-                "inline": True,
-            }
-        )
-
-    links_lines = [
-        f"🔗 [Abrir Factura en Admin Dashboard]({payload.dashboard_links.admin_invoice_url})",
-        f"🎫 [Abrir Ticket en Admin Dashboard]({payload.dashboard_links.admin_ticket_url})",
-    ]
-    if payload.dashboard_links.admin_service_url:
-        links_lines.append(
-            f"📦 [Activar Servicio Manualmente]({payload.dashboard_links.admin_service_url})"
-        )
-    if payload.dashboard_links.protected_receipt_url:
-        links_lines.append(
-            f"🔒 [Descargar Comprobante (Requiere Login Admin)]({payload.dashboard_links.protected_receipt_url})"
-        )
-
-    fields.append(
-        {
-            "name": "Acciones en Dashboard (Privado)",
-            "value": "\n".join(links_lines),
-            "inline": False,
-        }
-    )
 
     # Nota de seguridad: jamás se adjunta la imagen del comprobante al CDN público de Discord
     embed: Dict[str, Any] = {
@@ -199,40 +222,55 @@ async def notify_telegram(payload: PaymenterWebhookPayload) -> None:
     inv = payload.invoice
     meta = payload.meta
     is_paid = payload.event == "invoice.paid"
+    is_msg = payload.event == "ticket.message_created"
     inv_label = html.escape(str(inv.number or inv.id))
 
-    header = (
-        f"✅ <b>FACTURA #{inv_label} PAGADA (Pending Setup)</b>"
-        if is_paid
-        else f"🧾 <b>NUEVO COMPROBANTE P2P — FACTURA #{inv_label}</b>"
-    )
+    if is_msg:
+        ticket_id = meta.get("ticket_id", inv.id)
+        sender_name = html.escape(str(meta.get("sender_name", inv.user_name or "Cliente")))
+        is_admin = meta.get("is_admin", False)
+        msg_text = html.escape(str(meta.get("message_text", "")).strip())
+        role_label = "Soporte" if is_admin else "Cliente"
 
-    lines = [
-        header,
-        f"👤 <b>Cliente:</b> {html.escape(str(inv.user_name))} ({html.escape(str(inv.user_email))})",
-        f"💰 <b>Total:</b> {html.escape(str(inv.total))} {html.escape(str(inv.currency_code))}",
-    ]
-    if meta.get("payment_channel"):
-        lines.append(f"🏦 <b>Método:</b> {html.escape(str(meta['payment_channel']))}")
-    if meta.get("transaction_ref"):
-        lines.append(f"🔑 <b>Referencia/Hash:</b> <code>{html.escape(str(meta['transaction_ref']))}</code>")
-    if meta.get("player_identifier"):
-        lines.append(f"🎮 <b>ID Destino:</b> <code>{html.escape(str(meta['player_identifier']))}</code>")
+        lines = [
+            f"💬 <b>NUEVO MENSAJE EN TICKET #{ticket_id}</b>",
+            f"👤 <b>{role_label}:</b> {sender_name}",
+            f"\n<blockquote>{msg_text or '<i>(Archivo adjunto)</i>'}</blockquote>\n",
+            f"🎫 <a href='{html.escape(payload.dashboard_links.admin_ticket_url, quote=True)}'>Responder en Ticket Dashboard</a>",
+        ]
+    else:
+        header = (
+            f"✅ <b>FACTURA #{inv_label} PAGADA (Pending Setup)</b>"
+            if is_paid
+            else f"🧾 <b>NUEVO COMPROBANTE P2P — FACTURA #{inv_label}</b>"
+        )
 
-    lines.append(
-        f"\n🛡️ <a href='{html.escape(payload.dashboard_links.admin_invoice_url, quote=True)}'>Abrir Factura en Dashboard</a>"
-    )
-    lines.append(
-        f"🎫 <a href='{html.escape(payload.dashboard_links.admin_ticket_url, quote=True)}'>Abrir Ticket en Dashboard</a>"
-    )
-    if payload.dashboard_links.admin_service_url:
+        lines = [
+            header,
+            f"👤 <b>Cliente:</b> {html.escape(str(inv.user_name))} ({html.escape(str(inv.user_email))})",
+            f"💰 <b>Total:</b> {html.escape(str(inv.total))} {html.escape(str(inv.currency_code))}",
+        ]
+        if meta.get("payment_channel"):
+            lines.append(f"🏦 <b>Método:</b> {html.escape(str(meta['payment_channel']))}")
+        if meta.get("transaction_ref"):
+            lines.append(f"🔑 <b>Referencia/Hash:</b> <code>{html.escape(str(meta['transaction_ref']))}</code>")
+        if meta.get("player_identifier"):
+            lines.append(f"🎮 <b>ID Destino:</b> <code>{html.escape(str(meta['player_identifier']))}</code>")
+
         lines.append(
-            f"📦 <a href='{html.escape(payload.dashboard_links.admin_service_url, quote=True)}'>Activar Servicio en Dashboard</a>"
+            f"\n🛡️ <a href='{html.escape(payload.dashboard_links.admin_invoice_url, quote=True)}'>Abrir Factura en Dashboard</a>"
         )
-    if payload.dashboard_links.protected_receipt_url:
         lines.append(
-            f"🔒 <a href='{html.escape(payload.dashboard_links.protected_receipt_url, quote=True)}'>Ver Comprobante (Con Login)</a>"
+            f"🎫 <a href='{html.escape(payload.dashboard_links.admin_ticket_url, quote=True)}'>Abrir Ticket en Dashboard</a>"
         )
+        if payload.dashboard_links.admin_service_url:
+            lines.append(
+                f"📦 <a href='{html.escape(payload.dashboard_links.admin_service_url, quote=True)}'>Activar Servicio en Dashboard</a>"
+            )
+        if payload.dashboard_links.protected_receipt_url:
+            lines.append(
+                f"🔒 <a href='{html.escape(payload.dashboard_links.protected_receipt_url, quote=True)}'>Ver Comprobante (Con Login)</a>"
+            )
 
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     async with httpx.AsyncClient(timeout=8.0) as client:
@@ -250,7 +288,7 @@ async def notify_telegram(payload: PaymenterWebhookPayload) -> None:
 
 async def notify_arturo(payload: PaymenterWebhookPayload) -> None:
     """
-    Despacha eventos en tiempo real hacia el gateway interno configurado:
+    Despacha eventos en tiempo real hacia el gateway interno Arturo:
       1. Notificación Push en tiempo real (SSE) via POST /api/notifications.
       2. Registro estructurado en bitácora Markdown via POST /api/notas.
     """
@@ -264,26 +302,39 @@ async def notify_arturo(payload: PaymenterWebhookPayload) -> None:
     inv = payload.invoice
     meta = payload.meta
     is_paid = payload.event == "invoice.paid"
+    is_msg = payload.event == "ticket.message_created"
     inv_label = str(inv.number or inv.id)
 
-    titulo_push = (
-        f"OasisStore: Factura #{inv_label} PAGADA"
-        if is_paid
-        else f"OasisStore: Comprobante P2P (#{inv_label})"
-    )
+    if is_msg:
+        ticket_id = meta.get("ticket_id", inv.id)
+        sender_name = meta.get("sender_name", inv.user_name or "Cliente")
+        is_admin = meta.get("is_admin", False)
+        msg_text = str(meta.get("message_text", "")).strip()
+        role_label = "Soporte" if is_admin else "Cliente"
+        preview = (msg_text[:120] + "...") if len(msg_text) > 120 else msg_text
 
-    detalles = [
-        f"Cliente: {inv.user_name} ({inv.user_email})",
-        f"Total: {inv.total} {inv.currency_code}",
-    ]
-    if meta.get("payment_channel"):
-        detalles.append(f"Método: {meta['payment_channel']}")
-    if meta.get("transaction_ref"):
-        detalles.append(f"Ref: {meta['transaction_ref']}")
-    if meta.get("player_identifier"):
-        detalles.append(f"ID Destino: {meta['player_identifier']}")
+        titulo_push = f"💬 OasisStore: Mensaje de {sender_name} (Ticket #{ticket_id})"
+        mensaje_push = f"[{role_label}] {preview}" if preview else f"[{role_label}] Adjuntó archivo"
+    else:
+        titulo_push = (
+            f"OasisStore: Factura #{inv_label} PAGADA"
+            if is_paid
+            else f"OasisStore: Comprobante P2P (#{inv_label})"
+        )
 
-    mensaje_push = " | ".join(detalles)
+        detalles = [
+            f"Cliente: {inv.user_name} ({inv.user_email})",
+            f"Total: {inv.total} {inv.currency_code}",
+        ]
+        if meta.get("payment_channel"):
+            detalles.append(f"Método: {meta['payment_channel']}")
+        if meta.get("transaction_ref"):
+            detalles.append(f"Ref: {meta['transaction_ref']}")
+        if meta.get("player_identifier"):
+            detalles.append(f"ID Destino: {meta['player_identifier']}")
+
+        mensaje_push = " | ".join(detalles)
+
     headers = {
         "Content-Type": "application/json",
         "X-Arturo-Key": ARTURO_API_KEY,
@@ -305,25 +356,39 @@ async def notify_arturo(payload: PaymenterWebhookPayload) -> None:
         except Exception as exc:
             logger.warning("No se pudo enviar Push a Arturo-Api: %s", exc)
 
-        # Canal 2: Bitácora Markdown estructurada
+        # Canal 2: Bitácora Markdown estructurada en Obsidian / Bóveda
         if ARTURO_LOG_TO_VAULT:
             try:
-                estado_orden = meta.get("order_state", inv.status)
-                lineas_md = [
-                    f"### {titulo_push}",
-                    f"- **Evento:** `{payload.event}`",
-                    f"- **Fecha UTC:** `{payload.timestamp}`",
-                    f"- **Cliente:** {inv.user_name} (`{inv.user_email}`)",
-                    f"- **Monto:** **{inv.total} {inv.currency_code}**",
-                    f"- **Estado Orden:** `{estado_orden}`",
-                ]
-                if meta.get("payment_channel"):
-                    lineas_md.append(f"- **Canal P2P:** {meta['payment_channel']}")
-                if meta.get("transaction_ref"):
-                    lineas_md.append(f"- **Referencia / TxID:** `{meta['transaction_ref']}`")
-                if meta.get("player_identifier"):
-                    lineas_md.append(f"- **ID Destino:** `{meta['player_identifier']}`")
-                lineas_md.append(f"- **Factura Admin:** {payload.dashboard_links.admin_invoice_url}")
+                if is_msg:
+                    ticket_id = meta.get("ticket_id", inv.id)
+                    sender_name = meta.get("sender_name", inv.user_name or "Cliente")
+                    is_admin = meta.get("is_admin", False)
+                    msg_text = str(meta.get("message_text", "")).strip()
+                    role_label = "Soporte" if is_admin else "Cliente"
+
+                    lineas_md = [
+                        f"\n> **[💬 {role_label}] {sender_name}** (`{payload.timestamp}`):",
+                        f"> {msg_text.replace(chr(10), chr(10) + '> ')}",
+                        f"- Ticket Dashboard: {payload.dashboard_links.admin_ticket_url}",
+                    ]
+                else:
+                    estado_orden = meta.get("order_state", inv.status)
+                    lineas_md = [
+                        f"\n### {titulo_push}",
+                        f"- **Evento:** `{payload.event}`",
+                        f"- **Fecha UTC:** `{payload.timestamp}`",
+                        f"- **Cliente:** {inv.user_name} (`{inv.user_email}`)",
+                        f"- **Monto:** **{inv.total} {inv.currency_code}**",
+                        f"- **Estado Orden:** `{estado_orden}`",
+                    ]
+                    if meta.get("payment_channel"):
+                        lineas_md.append(f"- **Canal P2P:** {meta['payment_channel']}")
+                    if meta.get("transaction_ref"):
+                        lineas_md.append(f"- **Referencia / TxID:** `{meta['transaction_ref']}`")
+                    if meta.get("player_identifier"):
+                        lineas_md.append(f"- **ID Destino:** `{meta['player_identifier']}`")
+                    lineas_md.append(f"- **Factura Admin:** {payload.dashboard_links.admin_invoice_url}")
+                    lineas_md.append(f"- **Ticket Admin:** {payload.dashboard_links.admin_ticket_url}")
 
                 resp_nota = await client.post(
                     f"{ARTURO_API_URL}/api/notas",
