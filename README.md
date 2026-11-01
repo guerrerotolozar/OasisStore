@@ -74,5 +74,23 @@ docker compose --profile scraper run --rm catalog-scraper
 
 ---
 
+## 🛡️ Auditoría de Seguridad Independiente (Full Audit Mode)
+
+Se ejecutó una auditoría de seguridad exhaustiva utilizando la skill especializada `security-audit` de Google Antigravity en modo **Full Audit**. El análisis cubrió las extensiones de pasarela (`OasisP2P`), temas Blade, el servicio de webhooks en FastAPI, Nginx endurecido y la configuración de contenedores Docker, validando de forma estricta los límites de confianza mediante subagentes verificadores independientes.
+
+Los resultados y artefactos formales se encuentran registrados en el directorio [`.audit/`](./.audit/):
+- **[`REPORT.md`](./.audit/REPORT.md)**: Informe ejecutivo de seguridad, desglose de postura y matriz de hallazgos.
+- **[`FINDINGS-DETAIL.md`](./.audit/FINDINGS-DETAIL.md)**: Trazas fuente a sumidero, reproducciones delimitadas y casos de prueba de regresión.
+- **[`NEEDS-VALIDATION.md`](./.audit/NEEDS-VALIDATION.md)**: Validaciones de red `arturo-net`, secretos HMAC y reglas de Cloudflare Tunnel.
+- **[`findings.json`](./.audit/findings.json)**: Registros estructurados validados contra el esquema JSON oficial (`report-schema.json`).
+- **[`coverage-ledger.json`](./.audit/coverage-ledger.json)**: Matriz determinista de cobertura de superficies analizadas.
+
+### Hallazgos Clave Identificados para Remediación:
+1. **[CRITICAL] Redis sin Autenticación con Sesiones y Colas Laravel (`docker-compose.yml`)**: El servicio de Redis opera sin `--requirepass`, exponiendo sesiones activas (`SESSION_DRIVER=redis`) y permitiendo potencial ejecución remota de código (RCE) mediante inyección de trabajos maliciosos en colas (`QUEUE_CONNECTION=redis`).
+2. **[HIGH] Permisos World-Writable (`chmod -R 777`) en Código Ejecutable PHP (`docker-compose.yml` y `docker/paymenter/Dockerfile`)**: Se aplican permisos universales de escritura sobre `/app/themes` y `/app/extensions`, permitiendo a procesos no privilegiados modificar la pasarela `OasisP2P.php` o inyectar webshells.
+3. **[MEDIUM] `TRUSTED_PROXIES: "*"` Desbocado (`docker-compose.yml`)**: Confianza incondicional en cabeceras `X-Forwarded-*`, habilitando spoofing de IP de origen y potencial envenenamiento de Host headers para enlaces generados dinámicamente.
+
+---
+
 ## Licencia
 El código de las extensiones (`OasisP2P`), el tema (`themes/oasis`), el microservicio (`webhook-service`) y la plantilla de sincronización (`catalog-scraper`) se distribuye con fines educativos y de portafolio bajo licencia **MIT**. El núcleo base de facturación utiliza [Paymenter](https://github.com/paymenter/paymenter) (MIT License).

@@ -1,0 +1,28 @@
+{
+  "run_id": "run-oasisstore-1",
+  "repo": "OasisStore",
+  "target": "W:\\OasisStore",
+  "source_ref": "0894172",
+  "profile": "full",
+  "scope_paths": [
+    "extensions",
+    "themes",
+    "webhook-service",
+    "catalog-scraper",
+    "docker",
+    "docker-compose.yml"
+  ],
+  "budget": null,
+  "execution_policy": "sandboxed-source-and-local-only",
+  "selected_companion_files": [
+    "WEB-PROTOCOL-AND-AUTH.md",
+    "DATA-ISOLATION-AND-LIFECYCLE.md",
+    "CLOUD-AND-DEPLOYMENT.md",
+    "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md"
+  ],
+  "prior_run_paths": [],
+  "shared_file_owners": {
+    "parent": "antigravity"
+  },
+  "run_status": "complete"
+}

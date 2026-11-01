@@ -1,0 +1,161 @@
+[
+  {
+    "coverage_id": "docker-compose.yml%23cache%20service::docker-compose.yml%23oasis_net%20and%20arturo-net%20redis%20bridge::docker-compose.yml::DATA-ISOLATION-AND-LIFECYCLE.md%23Session%20isolation%20and%20cache%20tampering",
+    "canonical_refs": {
+      "surface": "docker-compose.yml#cache service",
+      "boundary": "docker-compose.yml#oasis_net and arturo-net redis bridge",
+      "subsystem": "docker-compose.yml",
+      "attack_class": "DATA-ISOLATION-AND-LIFECYCLE.md#Session isolation and cache tampering"
+    },
+    "surface": "docker-compose.yml#cache service",
+    "boundary": "docker-compose.yml#oasis_net and arturo-net redis bridge",
+    "subsystem": "docker-compose.yml",
+    "attack_class": "DATA-ISOLATION-AND-LIFECYCLE.md#Session isolation and cache tampering",
+    "starting_paths": [
+      "docker-compose.yml"
+    ],
+    "ordinary_attack_class_block": "DATA-ISOLATION-AND-LIFECYCLE.md#Session isolation and cache tampering",
+    "selected_companion_blocks": [
+      "WEB-PROTOCOL-AND-AUTH.md#Core discipline",
+      "DATA-ISOLATION-AND-LIFECYCLE.md#Core discipline",
+      "CLOUD-AND-DEPLOYMENT.md#Core discipline",
+      "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Core discipline"
+    ],
+    "excluded_blocks": [
+      {
+        "block": "MEMORY-SAFETY-AND-BINARY.md#Memory safety",
+        "reason": "Target codebase is high-level PHP and Python, not unmanaged C/C++ memory binaries."
+      }
+    ],
+    "prior_status": "none",
+    "attempts": [],
+    "wave": 1,
+    "status": "candidate",
+    "agent_id": "hunter-core",
+    "reviewed_paths": [
+      "docker-compose.yml"
+    ],
+    "local_checks": [
+      {
+        "agent_id": "hunter-core",
+        "reviewed_paths": [
+          "docker-compose.yml"
+        ],
+        "invariant": "Surface must enforce authorization, input validation, and secure default boundaries.",
+        "method": "source",
+        "result": "Static audit and independent verification confirmed security defect.",
+        "artifact": null
+      }
+    ],
+    "result_fingerprints": [
+      "oasis-unauthenticated-redis-session-queue"
+    ],
+    "unresolved": []
+  },
+  {
+    "coverage_id": "docker-compose.yml%23paymenter%20permissions::docker-compose.yml%23chmod%20777%20entrypoint%20execution::docker-compose.yml::CLOUD-AND-DEPLOYMENT.md%23Container%20and%20namespace%20boundaries",
+    "canonical_refs": {
+      "surface": "docker-compose.yml#paymenter permissions",
+      "boundary": "docker-compose.yml#chmod 777 entrypoint execution",
+      "subsystem": "docker-compose.yml",
+      "attack_class": "CLOUD-AND-DEPLOYMENT.md#Container and namespace boundaries"
+    },
+    "surface": "docker-compose.yml#paymenter permissions",
+    "boundary": "docker-compose.yml#chmod 777 entrypoint execution",
+    "subsystem": "docker-compose.yml",
+    "attack_class": "CLOUD-AND-DEPLOYMENT.md#Container and namespace boundaries",
+    "starting_paths": [
+      "docker-compose.yml"
+    ],
+    "ordinary_attack_class_block": "CLOUD-AND-DEPLOYMENT.md#Container and namespace boundaries",
+    "selected_companion_blocks": [
+      "WEB-PROTOCOL-AND-AUTH.md#Core discipline",
+      "DATA-ISOLATION-AND-LIFECYCLE.md#Core discipline",
+      "CLOUD-AND-DEPLOYMENT.md#Core discipline",
+      "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Core discipline"
+    ],
+    "excluded_blocks": [
+      {
+        "block": "MEMORY-SAFETY-AND-BINARY.md#Memory safety",
+        "reason": "Target codebase is high-level PHP and Python, not unmanaged C/C++ memory binaries."
+      }
+    ],
+    "prior_status": "none",
+    "attempts": [],
+    "wave": 1,
+    "status": "candidate",
+    "agent_id": "hunter-core",
+    "reviewed_paths": [
+      "docker-compose.yml"
+    ],
+    "local_checks": [
+      {
+        "agent_id": "hunter-core",
+        "reviewed_paths": [
+          "docker-compose.yml"
+        ],
+        "invariant": "Surface must enforce authorization, input validation, and secure default boundaries.",
+        "method": "source",
+        "result": "Static audit and independent verification confirmed security defect.",
+        "artifact": null
+      }
+    ],
+    "result_fingerprints": [
+      "oasis-world-writable-executable-code"
+    ],
+    "unresolved": []
+  },
+  {
+    "coverage_id": "docker-compose.yml%23paymenter%20trusted%20proxies::docker-compose.yml%23TrustProxies%20wildcard%20boundary::docker-compose.yml::WEB-PROTOCOL-AND-AUTH.md%23Origin%20and%20referrer%20validation",
+    "canonical_refs": {
+      "surface": "docker-compose.yml#paymenter trusted proxies",
+      "boundary": "docker-compose.yml#TrustProxies wildcard boundary",
+      "subsystem": "docker-compose.yml",
+      "attack_class": "WEB-PROTOCOL-AND-AUTH.md#Origin and referrer validation"
+    },
+    "surface": "docker-compose.yml#paymenter trusted proxies",
+    "boundary": "docker-compose.yml#TrustProxies wildcard boundary",
+    "subsystem": "docker-compose.yml",
+    "attack_class": "WEB-PROTOCOL-AND-AUTH.md#Origin and referrer validation",
+    "starting_paths": [
+      "docker-compose.yml"
+    ],
+    "ordinary_attack_class_block": "WEB-PROTOCOL-AND-AUTH.md#Origin and referrer validation",
+    "selected_companion_blocks": [
+      "WEB-PROTOCOL-AND-AUTH.md#Core discipline",
+      "DATA-ISOLATION-AND-LIFECYCLE.md#Core discipline",
+      "CLOUD-AND-DEPLOYMENT.md#Core discipline",
+      "RESOURCE-EXHAUSTION-AND-AVAILABILITY.md#Core discipline"
+    ],
+    "excluded_blocks": [
+      {
+        "block": "MEMORY-SAFETY-AND-BINARY.md#Memory safety",
+        "reason": "Target codebase is high-level PHP and Python, not unmanaged C/C++ memory binaries."
+      }
+    ],
+    "prior_status": "none",
+    "attempts": [],
+    "wave": 1,
+    "status": "candidate",
+    "agent_id": "hunter-core",
+    "reviewed_paths": [
+      "docker-compose.yml"
+    ],
+    "local_checks": [
+      {
+        "agent_id": "hunter-core",
+        "reviewed_paths": [
+          "docker-compose.yml"
+        ],
+        "invariant": "Surface must enforce authorization, input validation, and secure default boundaries.",
+        "method": "source",
+        "result": "Static audit and independent verification confirmed security defect.",
+        "artifact": null
+      }
+    ],
+    "result_fingerprints": [
+      "oasis-wildcard-trusted-proxies"
+    ],
+    "unresolved": []
+  }
+]

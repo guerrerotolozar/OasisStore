@@ -1,0 +1,254 @@
+[
+  {
+    "verdict": "confirmed",
+    "fingerprint": "oasis-unauthenticated-redis-session-queue",
+    "title": "Unauthenticated Redis Exposing Laravel Sessions and Asynchronous Queue Deserialization",
+    "description": "In OasisStore, Redis 7 runs without password authentication. Laravel uses Redis for SESSION_DRIVER, CACHE_STORE, and QUEUE_CONNECTION. The container is attached to oasis_net and bridged with external arturo-net. Any container or local service can inspect active user/admin sessions or inject malicious serialized jobs into the Redis queue for PHP deserialization.",
+    "root_cause": "Omitting --requirepass in redis-server startup command while storing sensitive sessions and executable queue jobs.",
+    "intended_behavior": "Redis should enforce password authentication (--requirepass) and restrict access to authorized application services.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "docker-compose.yml",
+        "line": 26,
+        "scope": "services.cache.command",
+        "description": "Starts Redis server without password: redis-server --save 60 1 --loglevel warning."
+      },
+      {
+        "kind": "propagation",
+        "file": "docker-compose.yml",
+        "line": 71,
+        "scope": "services.paymenter.environment",
+        "description": "Configures Laravel to store sessions in Redis: SESSION_DRIVER: redis, CACHE_STORE: redis, QUEUE_CONNECTION: redis."
+      },
+      {
+        "kind": "sink",
+        "file": "docker-compose.yml",
+        "line": 104,
+        "scope": "services.paymenter.networks",
+        "description": "Exposes Redis cache across multi-container bridge networks including external arturo-net."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "docker-compose.yml",
+        "line": 26,
+        "description": "command: redis-server --save 60 1 --loglevel warning"
+      },
+      {
+        "file": "docker-compose.yml",
+        "line": 71,
+        "description": "SESSION_DRIVER: \"redis\""
+      },
+      {
+        "file": "docker-compose.yml",
+        "line": 72,
+        "description": "QUEUE_CONNECTION: \"redis\""
+      }
+    ],
+    "conditions": [
+      {
+        "kind": "network_routing",
+        "description": "Attacker has access to oasis_net or the shared arturo-net bridge network."
+      }
+    ],
+    "execution": {
+      "attacker_perspective": "An attacker within the Docker bridge network queries the Redis service.",
+      "payloads": [
+        "redis-cli -h cache KEYS \"*laravel_session*\""
+      ],
+      "instructions": [
+        "Connect to oasis-redis on port 6379 from any container on the bridge network.",
+        "Dump session keys or push serialized job objects into queues:default."
+      ],
+      "observed_result": "Instant read/write access to Laravel session tokens, user IDs, and background queue payloads."
+    },
+    "remediation": {
+      "strategy": "Configure --requirepass in docker-compose.yml for redis-server and define REDIS_PASSWORD in paymenter environment and .env.",
+      "code_changes": [
+        {
+          "file_name": "docker-compose.yml",
+          "fixed_code": "  cache:\n    image: redis:7-alpine\n    container_name: oasis-redis\n    restart: unless-stopped\n    command: redis-server --requirepass \"${REDIS_PASSWORD:?Falta definir REDIS_PASSWORD}\" --save 60 1 --loglevel warning\n    volumes:\n      - \"./data/redis:/data\"\n    networks:\n      - oasis_net"
+        }
+      ]
+    },
+    "severity": {
+      "likelihood": {
+        "score": "medium",
+        "reason": "Requires access to the internal Docker bridge network or a co-located container."
+      },
+      "impact": {
+        "score": "critical",
+        "reason": "Enables session hijacking of administrators and potential remote code execution via Laravel queue deserialization."
+      },
+      "overall_severity": "critical"
+    },
+    "confidence": {
+      "score": "high",
+      "reason": "Confirmed directly in OasisStore docker-compose.yml lines 22-35 and 70-74."
+    }
+  },
+  {
+    "verdict": "confirmed",
+    "fingerprint": "oasis-wildcard-trusted-proxies",
+    "title": "Blind Trust in Reverse Proxies (TRUSTED_PROXIES: \"*\") Enabling IP and Host Spoofing",
+    "description": "Setting TRUSTED_PROXIES: \"*\" in OasisStore instructs Laravel TrustProxies middleware to trust all X-Forwarded-* headers from any origin. If requests bypass the Cloudflare tunnel or hit port 8085 directly, attackers can spoof their client IP address to evade throttling or inject arbitrary Host headers into generated application URLs.",
+    "root_cause": "Using wildcard \"*\" for TRUSTED_PROXIES instead of specific trusted proxy IP addresses or subnets.",
+    "intended_behavior": "TRUSTED_PROXIES should be restricted to known reverse proxy IP ranges (e.g. Cloudflare IP subnets or Docker bridge gateway).",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "docker-compose.yml",
+        "line": 63,
+        "scope": "services.paymenter.environment",
+        "description": "Sets TRUSTED_PROXIES: \"*\" for the Laravel application."
+      },
+      {
+        "kind": "propagation",
+        "file": "DOMINIO_CLOUDFLARE_TECH.md",
+        "line": 11,
+        "scope": "Documentation note",
+        "description": "Documents that TRUSTED_PROXIES: \"*\" is enabled to detect Cloudflare HTTPS headers."
+      },
+      {
+        "kind": "sink",
+        "file": "docker-compose.yml",
+        "line": 46,
+        "scope": "services.paymenter.ports",
+        "description": "Paymenter listens on port 8085 where direct requests with forged X-Forwarded headers are processed."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "docker-compose.yml",
+        "line": 63,
+        "description": "TRUSTED_PROXIES: \"*\""
+      }
+    ],
+    "conditions": [
+      {
+        "kind": "network_routing",
+        "description": "Attacker communicates with the web server and injects X-Forwarded-For or X-Forwarded-Host headers."
+      }
+    ],
+    "execution": {
+      "attacker_perspective": "An attacker sends requests with spoofed X-Forwarded-For headers.",
+      "payloads": [
+        "curl -H \"X-Forwarded-For: 1.2.3.4\" -H \"X-Forwarded-Host: phishing-domain.com\" http://localhost:8085/"
+      ],
+      "instructions": [
+        "Send request with forged X-Forwarded-For and X-Forwarded-Host headers.",
+        "Verify that Laravel adopts the forged IP and host in route generation."
+      ],
+      "observed_result": "Laravel accepts forged headers, facilitating rate-limit evasion and host poisoning."
+    },
+    "remediation": {
+      "strategy": "Replace wildcard \"*\" with specific reverse proxy IP addresses or Cloudflare subnet blocks.",
+      "code_changes": [
+        {
+          "file_name": "docker-compose.yml",
+          "fixed_code": "      TRUSTED_PROXIES: \"172.18.0.0/16,127.0.0.1\""
+        }
+      ]
+    },
+    "severity": {
+      "likelihood": {
+        "score": "medium",
+        "reason": "Effective when traffic reaches port 8085 or if front-facing proxy fails to strip untrusted headers."
+      },
+      "impact": {
+        "score": "medium",
+        "reason": "Allows bypassing IP-based rate limiting, spoofing audit logs, and potential cache/host poisoning."
+      },
+      "overall_severity": "medium"
+    },
+    "confidence": {
+      "score": "high",
+      "reason": "Confirmed directly in docker-compose.yml line 63."
+    }
+  },
+  {
+    "verdict": "confirmed",
+    "fingerprint": "oasis-world-writable-executable-code",
+    "title": "World-Writable Permissions (chmod -R 777) on Executable PHP Code and Blade Templates",
+    "description": "Paymenter container startup command forcefully executes chmod -R 777 /app/themes /app/extensions on persistent host mounts. This leaves PHP controller files, payment gateways (OasisP2P.php), and Blade templates world-writable. Any unprivileged process or container breach can modify live PHP scripts to execute persistent backdoors.",
+    "root_cause": "Applying chmod -R 777 to application source code directories containing executable PHP files.",
+    "intended_behavior": "Code files should be read-only for web processes (644 for files, 755 for directories, owned by nginx:nginx), restricting write permissions exclusively to /app/storage and /app/var.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "docker-compose.yml",
+        "line": 43,
+        "scope": "services.paymenter.command",
+        "description": "Startup command executes chmod -R 777 /app/themes /app/extensions before supervisord starts."
+      },
+      {
+        "kind": "propagation",
+        "file": "docker/paymenter/Dockerfile",
+        "line": 63,
+        "scope": "RUN entrypoint sed",
+        "description": "Replaced original 755 permissions with chmod -R 777 in entrypoint script."
+      },
+      {
+        "kind": "sink",
+        "file": "extensions/Gateways/OasisP2P/OasisP2P.php",
+        "line": 28,
+        "scope": "OasisP2P class",
+        "description": "Executable payment gateway PHP script running with 0777 write permissions inside web runtime."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "docker-compose.yml",
+        "line": 43,
+        "description": "chmod -R 777 /app/themes /app/extensions && composer dump-autoload -o"
+      },
+      {
+        "file": "docker/paymenter/Dockerfile",
+        "line": 65,
+        "description": "chmod -R 777 /app/themes /app/extensions"
+      }
+    ],
+    "conditions": [
+      {
+        "kind": "system_configuration",
+        "description": "Container starts with entrypoint that grants 777 permissions to code directories."
+      }
+    ],
+    "execution": {
+      "attacker_perspective": "A low-privileged process or attacker exploiting an upload/traversal bug writes to a PHP file in themes or extensions.",
+      "payloads": [
+        "echo '<?php system($_GET[\"cmd\"]); ?>' >> /app/themes/oasis/theme.php"
+      ],
+      "instructions": [
+        "Inspect file permissions of /app/themes and /app/extensions inside paymenter container.",
+        "Verify that non-root users can write directly to PHP source files."
+      ],
+      "observed_result": "All PHP and Blade files have mode 0777, allowing arbitrary modification and persistent code execution."
+    },
+    "remediation": {
+      "strategy": "Remove chmod -R 777 from docker-compose.yml and Dockerfile. Enforce standard 755/644 permissions owned by nginx:nginx.",
+      "code_changes": [
+        {
+          "file_name": "docker-compose.yml",
+          "fixed_code": "    command: [\"/bin/ash\", \"-c\", \"chown -R nginx:nginx /app/themes /app/extensions && chmod -R 755 /app/themes /app/extensions && composer dump-autoload -o && php artisan optimize:clear && exec supervisord -n -c /etc/supervisord.conf\"]"
+        }
+      ]
+    },
+    "severity": {
+      "likelihood": {
+        "score": "medium",
+        "reason": "Requires local container access or an auxiliary file-write flaw to directly alter the PHP files."
+      },
+      "impact": {
+        "score": "critical",
+        "reason": "Permits turning any arbitrary file write into persistent Arbitrary Code Execution (ACE) and gateway hijacking."
+      },
+      "overall_severity": "high"
+    },
+    "confidence": {
+      "score": "high",
+      "reason": "Directly verified in docker-compose.yml line 43 and Dockerfile line 65."
+    }
+  }
+]
