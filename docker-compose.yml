@@ -23,11 +23,13 @@ services:
     image: redis:7-alpine
     container_name: oasis-redis
     restart: unless-stopped
-    command: redis-server --save 60 1 --loglevel warning
+    command: redis-server --requirepass "${REDIS_PASSWORD:?Falta definir REDIS_PASSWORD en el archivo .env}" --save 60 1 --loglevel warning
+    environment:
+      REDIS_PASSWORD: "${REDIS_PASSWORD}"
     volumes:
       - "./data/redis:/data"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a "$REDIS_PASSWORD" ping || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -40,7 +42,7 @@ services:
       dockerfile: docker/paymenter/Dockerfile
     container_name: oasis-paymenter
     restart: unless-stopped
-    command: ["/bin/ash", "-c", "chmod -R 777 /app/themes /app/extensions && composer dump-autoload -o && php artisan optimize:clear && exec supervisord -n -c /etc/supervisord.conf"]
+    command: ["/bin/ash", "-c", "chown -R nginx:nginx /app/themes /app/extensions && chmod -R 755 /app/themes /app/extensions && composer dump-autoload -o && php artisan optimize:clear && exec supervisord -n -c /etc/supervisord.conf"]
     # Enlaza únicamente a la interfaz definida en BIND_IP (127.0.0.1 o IP VPN privada, nunca 0.0.0.0)
     ports:
       - "${BIND_IP:-127.0.0.1}:${APP_PORT:-8085}:80"
@@ -60,7 +62,7 @@ services:
       APP_URL: ${APP_URL:-http://localhost:8085}
       APP_LOCALE: "${APP_LOCALE:-es}"
       APP_FALLBACK_LOCALE: "en"
-      TRUSTED_PROXIES: "*"
+      TRUSTED_PROXIES: "${TRUSTED_PROXIES:-172.18.0.0/16,127.0.0.1}"
       DB_CONNECTION: "mariadb"
       DB_HOST: "database"
       DB_PORT: "3306"
@@ -71,6 +73,7 @@ services:
       SESSION_DRIVER: "redis"
       QUEUE_CONNECTION: "redis"
       REDIS_HOST: "cache"
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-}"
       PAYMENTER_SKIP_DEFAULT: "true"
       OASIS_WEBHOOK_URL: "http://oasis-webhook:8000/webhook/paymenter"
       OASIS_WEBHOOK_SECRET: "${WEBHOOK_SECRET:?Falta definir WEBHOOK_SECRET en el archivo .env}"

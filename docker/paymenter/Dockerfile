@@ -60,9 +60,8 @@ COPY --from=build /app/public /app/public
 # y ajustar entrypoint.sh para conservar permisos de escritura en volúmenes montados
 RUN cp -r /app/themes /app/themes_default && \
     cp -r /app/extensions /app/extensions_default && \
-    sed -i 's/chmod -R 755 \/app\/themes \/app\/extensions/chmod -R 777 \/app\/themes \/app\/extensions/g' /app/.github/docker/entrypoint.sh && \
     chown -R nginx:nginx /app/public /app/themes /app/themes_default /app/extensions /app/extensions_default && \
-    chmod -R 777 /app/themes /app/extensions
+    chmod -R 755 /app/themes /app/extensions
 
 ENV PAYMENTER_SKIP_DEFAULT=true
 

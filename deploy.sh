@@ -28,6 +28,10 @@ if [ ! -f .env ] || grep -q "aqui_pon_tu_" .env; then
         ROOT_PASS=$(openssl rand -hex 20)
         sed -i "s|^DB_ROOT_PASSWORD=.*|DB_ROOT_PASSWORD=\"${ROOT_PASS}\"|" .env
     fi
+    if grep -q '^REDIS_PASSWORD="aqui_pon_tu_' .env; then
+        REDIS_PASS=$(openssl rand -hex 24)
+        sed -i "s|^REDIS_PASSWORD=.*|REDIS_PASSWORD=\"${REDIS_PASS}\"|" .env
+    fi
     if grep -q '^WEBHOOK_SECRET="aqui_pon_tu_' .env; then
         WH_SECRET=$(openssl rand -hex 32)
         sed -i "s|^WEBHOOK_SECRET=.*|WEBHOOK_SECRET=\"${WH_SECRET}\"|" .env
