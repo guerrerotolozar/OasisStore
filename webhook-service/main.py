@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import re
+import sqlite3
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
@@ -36,10 +37,76 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "").strip()
 # --- Integración con el Orquestador / Gateway de Notificaciones Interno ---
 ARTURO_API_URL = os.getenv("ARTURO_API_URL", "").strip().rstrip("/")
 ARTURO_API_KEY = os.getenv("ARTURO_API_KEY", "").strip()
-ARTURO_VAULT_FOLDER = os.getenv("ARTURO_VAULT_FOLDER", "OPERACIONES/OasisStore").strip()
-ARTURO_LOG_TO_VAULT = os.getenv("ARTURO_LOG_TO_VAULT", "true").strip().lower() == "true"
+ARTURO_LOG_BITACORA = os.getenv("ARTURO_LOG_BITACORA", os.getenv("ARTURO_LOG_TO_VAULT", "true")).strip().lower() == "true"
+LOCAL_BITACORA_PATH = os.getenv("LOCAL_BITACORA_PATH", "/srv/storage/bitacora_oasis.db")
 
 MAX_TIMESTAMP_DRIFT_SECONDS = 300
+
+
+def init_local_db() -> None:
+    """Inicializa la base de datos local SQLite para auditoría persistente interna."""
+    try:
+        db_dir = os.path.dirname(LOCAL_BITACORA_PATH)
+        if db_dir and not os.path.exists(db_dir):
+            os.makedirs(db_dir, exist_ok=True)
+        with sqlite3.connect(LOCAL_BITACORA_PATH) as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS bitacora_eventos (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    evento TEXT NOT NULL,
+                    titulo TEXT,
+                    invoice_id INTEGER,
+                    ticket_id INTEGER,
+                    cliente_nombre TEXT,
+                    cliente_email TEXT,
+                    monto TEXT,
+                    moneda TEXT,
+                    detalles TEXT,
+                    payload_json TEXT NOT NULL,
+                    timestamp_origen TEXT,
+                    creado_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+                );
+            """)
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_oasis_evento ON bitacora_eventos(evento);")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_oasis_invoice ON bitacora_eventos(invoice_id);")
+            conn.commit()
+    except Exception as exc:
+        logger.warning("No se pudo inicializar SQLite local de bitácora: %s", exc)
+
+
+def record_local_event(
+    evento: str,
+    titulo: str,
+    invoice_id: Optional[int],
+    ticket_id: Optional[int],
+    cliente_nombre: str,
+    cliente_email: str,
+    monto: str,
+    moneda: str,
+    detalles: str,
+    raw_payload: Dict[str, Any],
+    timestamp: str,
+) -> None:
+    """Guarda una copia del evento en SQLite local (ultra liviano, 0 MB RAM en reposo)."""
+    try:
+        with sqlite3.connect(LOCAL_BITACORA_PATH) as conn:
+            conn.execute("""
+                INSERT INTO bitacora_eventos (
+                    evento, titulo, invoice_id, ticket_id,
+                    cliente_nombre, cliente_email, monto, moneda,
+                    detalles, payload_json, timestamp_origen
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                evento, titulo, invoice_id, ticket_id,
+                cliente_nombre, cliente_email, monto, moneda,
+                detalles, json.dumps(raw_payload, ensure_ascii=False), timestamp
+            ))
+            conn.commit()
+    except Exception as exc:
+        logger.warning("No se pudo guardar evento en SQLite local: %s", exc)
+
+
+init_local_db()
 
 # Desactivar /docs y /openapi.json en producción
 app = FastAPI(
@@ -304,6 +371,7 @@ async def notify_arturo(payload: PaymenterWebhookPayload) -> None:
     is_paid = payload.event == "invoice.paid"
     is_msg = payload.event == "ticket.message_created"
     inv_label = str(inv.number or inv.id)
+    ticket_id = meta.get("ticket_id")
 
     if is_msg:
         ticket_id = meta.get("ticket_id", inv.id)
@@ -356,52 +424,49 @@ async def notify_arturo(payload: PaymenterWebhookPayload) -> None:
         except Exception as exc:
             logger.warning("No se pudo enviar Push a Arturo-Api: %s", exc)
 
-        # Canal 2: Bitácora Markdown estructurada en Obsidian / Bóveda
-        if ARTURO_LOG_TO_VAULT:
+        # Canal 2: Bitácora estructurada en Base de Datos (SQLite/Arturo-Api y Local)
+        # Se elimina el volcado a Markdown en la Bóveda para evitar indexaciones vectoriales innecesarias en LanceDB
+        raw_dict = payload.model_dump() if hasattr(payload, "model_dump") else payload.dict()
+
+        # Guardar siempre copia local en SQLite
+        record_local_event(
+            evento=payload.event,
+            titulo=titulo_push,
+            invoice_id=inv.id,
+            ticket_id=ticket_id,
+            cliente_nombre=str(inv.user_name or "Cliente"),
+            cliente_email=str(inv.user_email or ""),
+            monto=str(inv.total),
+            moneda=str(inv.currency_code or "COP"),
+            detalles=mensaje_push,
+            raw_payload=raw_dict,
+            timestamp=payload.timestamp,
+        )
+
+        if ARTURO_LOG_BITACORA:
             try:
-                if is_msg:
-                    ticket_id = meta.get("ticket_id", inv.id)
-                    sender_name = meta.get("sender_name", inv.user_name or "Cliente")
-                    is_admin = meta.get("is_admin", False)
-                    msg_text = str(meta.get("message_text", "")).strip()
-                    role_label = "Soporte" if is_admin else "Cliente"
-
-                    lineas_md = [
-                        f"\n> **[💬 {role_label}] {sender_name}** (`{payload.timestamp}`):",
-                        f"> {msg_text.replace(chr(10), chr(10) + '> ')}",
-                        f"- Ticket Dashboard: {payload.dashboard_links.admin_ticket_url}",
-                    ]
-                else:
-                    estado_orden = meta.get("order_state", inv.status)
-                    lineas_md = [
-                        f"\n### {titulo_push}",
-                        f"- **Evento:** `{payload.event}`",
-                        f"- **Fecha UTC:** `{payload.timestamp}`",
-                        f"- **Cliente:** {inv.user_name} (`{inv.user_email}`)",
-                        f"- **Monto:** **{inv.total} {inv.currency_code}**",
-                        f"- **Estado Orden:** `{estado_orden}`",
-                    ]
-                    if meta.get("payment_channel"):
-                        lineas_md.append(f"- **Canal P2P:** {meta['payment_channel']}")
-                    if meta.get("transaction_ref"):
-                        lineas_md.append(f"- **Referencia / TxID:** `{meta['transaction_ref']}`")
-                    if meta.get("player_identifier"):
-                        lineas_md.append(f"- **ID Destino:** `{meta['player_identifier']}`")
-                    lineas_md.append(f"- **Factura Admin:** {payload.dashboard_links.admin_invoice_url}")
-                    lineas_md.append(f"- **Ticket Admin:** {payload.dashboard_links.admin_ticket_url}")
-
-                resp_nota = await client.post(
-                    f"{ARTURO_API_URL}/api/notas",
+                payload_bitacora = {
+                    "proyecto": "OasisStore",
+                    "evento": payload.event,
+                    "titulo": titulo_push,
+                    "invoice_id": inv.id,
+                    "ticket_id": ticket_id,
+                    "cliente_nombre": inv.user_name,
+                    "cliente_email": inv.user_email,
+                    "monto": inv.total,
+                    "moneda": inv.currency_code,
+                    "detalles": mensaje_push,
+                    "payload": raw_dict,
+                    "timestamp": payload.timestamp,
+                }
+                resp_bitacora = await client.post(
+                    f"{ARTURO_API_URL}/api/bitacora",
                     headers=headers,
-                    json={
-                        "titulo": "Bitacora_Ordenes_OasisStore",
-                        "carpeta": ARTURO_VAULT_FOLDER,
-                        "contexto": "\n".join(lineas_md),
-                    },
+                    json=payload_bitacora,
                 )
-                resp_nota.raise_for_status()
+                resp_bitacora.raise_for_status()
             except Exception as exc:
-                logger.warning("No se pudo registrar nota en Bóveda vía Arturo-Api: %s", exc)
+                logger.warning("No se pudo registrar evento en Bitácora vía Arturo-Api: %s", exc)
 
 
 async def request_arturo_inference(prompt: str, model: str = "gemma4:12b-it-qat") -> Optional[str]:

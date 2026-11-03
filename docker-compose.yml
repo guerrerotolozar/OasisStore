@@ -29,7 +29,7 @@ services:
     volumes:
       - "./data/redis:/data"
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a "$REDIS_PASSWORD" ping || exit 1"]
+      test: ["CMD-SHELL", 'redis-cli --no-auth-warning -a "$REDIS_PASSWORD" ping || exit 1']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -121,10 +121,10 @@ services:
       TELEGRAM_CHAT_ID: "${TELEGRAM_CHAT_ID:-}"
       ARTURO_API_URL: "${ARTURO_API_URL:-}"
       ARTURO_API_KEY: "${ARTURO_API_KEY:-}"
-      ARTURO_VAULT_FOLDER: "${ARTURO_VAULT_FOLDER:-OPERACIONES/OasisStore}"
-      ARTURO_LOG_TO_VAULT: "${ARTURO_LOG_TO_VAULT:-true}"
+      ARTURO_LOG_BITACORA: "${ARTURO_LOG_BITACORA:-true}"
     volumes:
       - ./webhook-service/main.py:/srv/main.py:ro
+      - ./storage:/srv/storage
     networks:
       - oasis_net
       - arturo-net
