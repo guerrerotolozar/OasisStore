@@ -1,0 +1,26 @@
+# Forzar terminaciones de línea Unix (LF) en todo el repositorio para prevenir
+# conflictos entre Windows (Samba/PowerShell) y Linux (Ubuntu/Docker).
+* text=auto eol=lf
+
+*.php text eol=lf
+*.blade.php text eol=lf
+*.js text eol=lf
+*.css text eol=lf
+*.json text eol=lf
+*.py text eol=lf
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+*.env* text eol=lf
+
+# Binarios / Imágenes
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.db binary
+*.sqlite binary

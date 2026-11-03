@@ -42,7 +42,7 @@ services:
       dockerfile: docker/paymenter/Dockerfile
     container_name: oasis-paymenter
     restart: unless-stopped
-    command: ["/bin/ash", "-c", "chown -R nginx:nginx /app/themes /app/extensions && chmod -R 755 /app/themes /app/extensions && composer dump-autoload -o && php artisan optimize:clear && exec supervisord -n -c /etc/supervisord.conf"]
+    command: ["/bin/ash", "-c", "composer dump-autoload -o && php artisan optimize:clear && exec supervisord -n -c /etc/supervisord.conf"]
     # Enlaza únicamente a la interfaz definida en BIND_IP (127.0.0.1 o IP VPN privada, nunca 0.0.0.0)
     ports:
       - "${BIND_IP:-127.0.0.1}:${APP_PORT:-8085}:80"
